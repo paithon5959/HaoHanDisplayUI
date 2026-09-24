@@ -1,34 +1,34 @@
+/*
+ * Copyright (C) 2026 HaoHanSMP
+ *
+ * This file is part of HaoHanDisplayUI.
+ *
+ * HaoHanDisplayUI is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ */
 package vn.haohan.displayui.demo.pages;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Material;
+import org.bukkit.Color;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import vn.haohan.displayui.api.UiDocument;
-import vn.haohan.displayui.api.animation.UiAnimation;
-import vn.haohan.displayui.api.animation.Easings;
-import vn.haohan.displayui.api.interaction.UiButton;
-import vn.haohan.displayui.api.interaction.UiControlChange;
-import vn.haohan.displayui.api.interaction.UiScrollList;
-import vn.haohan.displayui.api.node.AlignedTextNode;
-import vn.haohan.displayui.api.node.BlockNode;
-import vn.haohan.displayui.api.node.UiIconNode;
+import vn.haohan.displayui.api.component.ButtonComponent;
+import vn.haohan.displayui.api.component.IconComponent;
+import vn.haohan.displayui.api.component.TextComponent;
+import vn.haohan.displayui.api.container.Container;
+import vn.haohan.displayui.api.layout.UiAnchorPoint;
 import vn.haohan.displayui.api.text.UiTextAlignment;
 import vn.haohan.displayui.demo.AppEntry;
 import vn.haohan.displayui.demo.BaseDemoPage;
 import vn.haohan.displayui.demo.DemoContext;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public final class ChooseAppScrollListDemoPage extends BaseDemoPage {
-    private static final float LEFT = -78;
-    private static final float TOP = -34;
-    private static final float WIDTH = 156;
-    private static final float ROW_HEIGHT = 18;
+
     private static final int VISIBLE_ROWS = 4;
+    private static final float ROW_HEIGHT = 16.5f;
 
     @Override
     public String title() {
@@ -40,38 +40,117 @@ public final class ChooseAppScrollListDemoPage extends BaseDemoPage {
     }
 
     @Override
-    public void build(UiDocument.Builder builder, DemoContext context) {
-        builder.add(new AlignedTextNode(Component.text(
-                        "Scroll list · Mouse wheel or buttons to scroll",
-                        NamedTextColor.GRAY), -86, -43, 110, 9, UiTextAlignment.LEFT)
-                .fontSize(4.5f));
-
+    public void build(Container container, DemoContext context) {
+        // App rows
+        float startY = 0.0f;
         for (int row = 0; row < VISIBLE_ROWS; row++) {
             int index = context.appOffset() + row;
-            if (index >= context.appEntries().size()) {
-                addEmptyAppRow(builder, TOP + row * ROW_HEIGHT, row);
-            } else {
+            float y = startY + row * ROW_HEIGHT;
+            if (index < context.appEntries().size()) {
                 AppEntry app = context.appEntries().get(index);
-                addAppRow(builder, app, TOP + row * ROW_HEIGHT,
-                        "app_" + index, index == context.selectedApp());
+                addAppRow(container, app, y, "app_" + index, index == context.selectedApp());
             }
         }
 
-        builder.scrollList(new UiScrollList("demo_apps", LEFT, TOP, WIDTH,
-                VISIBLE_ROWS * ROW_HEIGHT, maxOffset(context), context.appOffset(),
-                Component.text("Scroll applications")));
-        builder.add(new AlignedTextNode(Component.text(
-                        (context.appOffset() + 1) + "–" + Math.min(context.appEntries().size(),
-                                context.appOffset() + VISIBLE_ROWS) + " / " + context.appEntries().size(),
-                        NamedTextColor.DARK_GRAY), LEFT, 40, WIDTH, 8,
-                UiTextAlignment.CENTER).fontSize(4));
-        addControlButton(builder, "app_up", 76, -29, 18, "▲", "Scroll up");
-        addControlButton(builder, "app_down", 76, 19, 18, "▼", "Scroll down");
+        // Scroll Controls on right
+        container.addComponent(ButtonComponent.builder("app_up")
+                .anchor(UiAnchorPoint.TOP_RIGHT)
+                .origin(UiAnchorPoint.TOP_RIGHT)
+                .offset(0.0f, 10.0f)
+                .size(16.0f, 20.0f)
+                .label("▲")
+                .borderRound(3.0f)
+                .build());
+
+        container.addComponent(ButtonComponent.builder("app_down")
+                .anchor(UiAnchorPoint.TOP_RIGHT)
+                .origin(UiAnchorPoint.TOP_RIGHT)
+                .offset(0.0f, 36.0f)
+                .size(16.0f, 20.0f)
+                .label("▼")
+                .borderRound(3.0f)
+                .build());
+
+        // Indicator
+        String indicator = (context.appOffset() + 1) + "–"
+                + Math.min(context.appEntries().size(), context.appOffset() + VISIBLE_ROWS)
+                + " / " + context.appEntries().size();
+        container.addComponent(TextComponent.builder("scroll_ind")
+                .anchor(UiAnchorPoint.BOTTOM_RIGHT)
+                .origin(UiAnchorPoint.BOTTOM_RIGHT)
+                .offset(0.0f, -2.0f)
+                .size(30.0f, 8.0f)
+                .alignment(UiTextAlignment.RIGHT)
+                .text(Component.text(indicator, NamedTextColor.DARK_GRAY))
+                .fontSize(3.5f)
+                .build());
     }
 
-    @Override
-    public void onShow(DemoContext context) {
-        playScrollEntranceAnimation(context);
+    private void addAppRow(Container container, AppEntry app, float y, String id, boolean selected) {
+        Color bgColor = selected ? Color.fromRGB(35, 60, 95) : Color.fromRGB(25, 30, 40);
+        Container row = Container.builder(id + "_row")
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(0.0f, y)
+                .size(152.0f, 15.0f)
+                .backgroundColor(bgColor)
+                .borderRound(3.0f)
+                .build();
+
+        // Icon
+        row.addComponent(IconComponent.builder(id + "_icon")
+                .anchor(UiAnchorPoint.CENTER_LEFT)
+                .origin(UiAnchorPoint.CENTER_LEFT)
+                .offset(4.0f, 0.0f)
+                .size(12.0f, 12.0f)
+                .material(app.icon())
+                .build());
+
+        // Selection marker
+        row.addComponent(TextComponent.builder(id + "_check")
+                .anchor(UiAnchorPoint.CENTER_LEFT)
+                .origin(UiAnchorPoint.CENTER_LEFT)
+                .offset(20.0f, 0.0f)
+                .size(10.0f, 10.0f)
+                .alignment(UiTextAlignment.CENTER)
+                .text(Component.text(selected ? "☑" : "☐", selected ? NamedTextColor.AQUA : NamedTextColor.WHITE))
+                .fontSize(4.5f)
+                .build());
+
+        // Name
+        row.addComponent(TextComponent.builder(id + "_name")
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(32.0f, 1.5f)
+                .size(80.0f, 6.0f)
+                .alignment(UiTextAlignment.LEFT)
+                .text(Component.text(app.name(), selected ? NamedTextColor.AQUA : NamedTextColor.WHITE, TextDecoration.BOLD))
+                .fontSize(4.2f)
+                .shadow(true)
+                .build());
+
+        // Description
+        row.addComponent(TextComponent.builder(id + "_desc")
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(32.0f, 8.0f)
+                .size(80.0f, 5.0f)
+                .alignment(UiTextAlignment.LEFT)
+                .text(Component.text(app.description(), NamedTextColor.GRAY))
+                .fontSize(3.2f)
+                .build());
+
+        // Clickable button
+        row.addComponent(ButtonComponent.builder(id)
+                .anchor(UiAnchorPoint.CENTER_RIGHT)
+                .origin(UiAnchorPoint.CENTER_RIGHT)
+                .offset(-3.0f, 0.0f)
+                .size(32.0f, 11.0f)
+                .label("SELECT")
+                .borderRound(2.0f)
+                .build());
+
+        container.addContainer(row);
     }
 
     @Override
@@ -102,75 +181,5 @@ public final class ChooseAppScrollListDemoPage extends BaseDemoPage {
             return true;
         }
         return false;
-    }
-
-    @Override
-    public void onControlChange(DemoContext context, UiControlChange change) {
-        if ("demo_apps".equals(change.control().id())) {
-            int prev = context.appOffset();
-            int next = (int) change.value();
-            if (prev != next) {
-                context.appOffset(next);
-                context.updateView();
-            }
-        }
-    }
-
-    private void playScrollEntranceAnimation(DemoContext context) {
-        if (context.handle() == null || !context.handle().isValid()) return;
-        int totalNodes = context.handle().nodeCount();
-        List<UiAnimation> list = new ArrayList<>(totalNodes);
-        for (int i = 0; i < totalNodes; i++) {
-            if (i < 2) {
-                list.add(UiAnimation.builder().durationTicks(1).build());
-            } else {
-                int row = (i - 2) / 5;
-                int delay = Math.max(0, row * 2);
-                list.add(UiAnimation.slideIn(10, UiAnimation.Direction.TOP, 12.0f,
-                        Easings.OutCubic).delay(delay));
-            }
-        }
-        context.handle().animateNodes(list);
-    }
-
-    private void addAppRow(UiDocument.Builder builder, AppEntry app, float y,
-                           String id, boolean selected) {
-        Material background = selected ? Material.LIGHT_BLUE_STAINED_GLASS
-                : Material.LIGHT_GRAY_STAINED_GLASS;
-        builder.add(new BlockNode(background.createBlockData(), -74, y,
-                0.002f, 148, 16, 1));
-        builder.add(new UiIconNode(new ItemStack(app.icon()), -70, y + 2, 0.005f,
-                12, 12, 16, 16, org.bukkit.entity.ItemDisplay.ItemDisplayTransform.FIXED));
-        builder.add(new AlignedTextNode(Component.text(selected ? "☑" : "☐",
-                        selected ? NamedTextColor.AQUA : NamedTextColor.WHITE),
-                -56, y + 3.0f, 10, 10, 0.005f, UiTextAlignment.CENTER,
-                0.0f, 0.0f, 6.5f, 10.0f, 0.0f, false, false));
-        builder.add(new AlignedTextNode(Component.text(app.name(),
-                        selected ? NamedTextColor.AQUA : NamedTextColor.WHITE, TextDecoration.BOLD), -43, y + 2.0f,
-                74, 6, 0.005f, UiTextAlignment.LEFT,
-                0.0f, 0.0f, 5.0f, 74.0f, 0.0f, true, false));
-        builder.add(new AlignedTextNode(Component.text(app.description(),
-                        NamedTextColor.GRAY), -43, y + 8.5f, 112, 6, 0.005f,
-                UiTextAlignment.LEFT, 0.0f, 0.0f, 3.5f, 112.0f, 0.0f, false, false));
-        builder.button(new UiButton(id, -74, y, 148, 16,
-                Component.text("Open " + app.name(), NamedTextColor.YELLOW)));
-    }
-
-    private void addEmptyAppRow(UiDocument.Builder builder, float y, int row) {
-        builder.add(new BlockNode(Material.GRAY_STAINED_GLASS.createBlockData(),
-                -74, y, 0.002f, 148, 16, 1));
-        builder.add(new UiIconNode(new ItemStack(Material.AIR), -70, y + 2, 0.005f,
-                12, 12, 16, 16, org.bukkit.entity.ItemDisplay.ItemDisplayTransform.FIXED));
-        builder.add(new AlignedTextNode(Component.empty(), -56, y + 3.0f,
-                10, 10, 0.005f, UiTextAlignment.CENTER,
-                0.0f, 0.0f, 6.5f, 10.0f, 0.0f, false, false));
-        builder.add(new AlignedTextNode(Component.empty(), -43, y + 2.0f,
-                74, 6, 0.005f, UiTextAlignment.LEFT,
-                0.0f, 0.0f, 5.0f, 74.0f, 0.0f, false, false));
-        builder.add(new AlignedTextNode(Component.empty(), -43, y + 8.5f,
-                112, 6, 0.005f, UiTextAlignment.LEFT,
-                0.0f, 0.0f, 3.5f, 112.0f, 0.0f, false, false));
-        builder.button(new UiButton("empty_app_" + row, -74, y, 148, 16,
-                Component.empty()));
     }
 }

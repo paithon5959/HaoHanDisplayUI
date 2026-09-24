@@ -1,41 +1,109 @@
+/*
+ * Copyright (C) 2026 HaoHanSMP
+ *
+ * This file is part of HaoHanDisplayUI.
+ *
+ * HaoHanDisplayUI is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ */
 package vn.haohan.displayui.demo;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Color;
-import vn.haohan.displayui.api.UiDocument;
-import vn.haohan.displayui.api.interaction.UiButton;
-import vn.haohan.displayui.api.node.AlignedTextNode;
-import vn.haohan.displayui.api.node.UiBackgroundNode;
-import vn.haohan.displayui.api.node.UiShapeNode;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import vn.haohan.displayui.api.component.*;
+import vn.haohan.displayui.api.container.Container;
+import vn.haohan.displayui.api.layout.UiAnchorPoint;
 import vn.haohan.displayui.api.text.UiTextAlignment;
 
+/**
+ * Base class for demo presentation pages providing declarative component builders.
+ */
 public abstract class BaseDemoPage implements DemoPage {
-    public static void addControlButton(UiDocument.Builder builder, String id, float x,
-                                         float y, String label, String description) {
-        addControlButton(builder, id, x, y, 78, label, description);
+
+    public static ButtonComponent createButton(String id, float width, float height, String label, String description) {
+        return ButtonComponent.builder(id)
+                .size(width, height)
+                .label(label)
+                .borderRound(4.0f)
+                .outline(true)
+                .outlineColor(Color.fromRGB(80, 140, 240))
+                .backgroundColor(Color.fromRGB(35, 45, 65))
+                .build();
     }
 
-    public static void addControlButton(UiDocument.Builder builder, String id, float x,
-                                         float y, float width, String label, String description) {
-        builder.add(UiShapeNode.builder("rounded_rect", x, y, width, 14)
-                        .color(Color.fromRGB(35, 45, 65))
-                        .cornerRadius(4.0f)
-                        .outline(true)
-                        .outlineColor(Color.fromRGB(80, 140, 240))
-                        .outlineThickness(1.0f)
-                        .outlineStyle("solid")
-                        .depth(0.001f)
-                        .build())
-                .add(new AlignedTextNode(Component.text(label, NamedTextColor.AQUA),
-                        x, y, width, 14, UiTextAlignment.CENTER)
-                        .fontSize(4.5f).verticalOffset(0).atDepth(0.004f).shadowed(true))
-                .button(new UiButton(id, x, y, width, 14,
-                        Component.text(description, NamedTextColor.YELLOW)));
+    public static ButtonComponent createButton(String id, float x, float y, float width, float height, String label) {
+        return ButtonComponent.builder(id)
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(x, y)
+                .size(width, height)
+                .label(label)
+                .borderRound(4.0f)
+                .outline(true)
+                .outlineColor(Color.fromRGB(80, 140, 240))
+                .backgroundColor(Color.fromRGB(35, 45, 65))
+                .build();
     }
 
-    public static void addSlotFrame(UiDocument.Builder builder, float x, float y, float w, float h) {
-        builder.add(new UiBackgroundNode(x, y, 0.001f, w, h, Color.fromRGB(60, 60, 70), false));
-        builder.add(new UiBackgroundNode(x + 1, y + 1, 0.002f, w - 2, h - 2, Color.fromRGB(20, 20, 25), false));
+    public static SliderComponent createSlider(String id, float width, double min, double max, double val, double step) {
+        return SliderComponent.builder(id)
+                .size(width, 14.0f)
+                .range(min, max, val)
+                .step(step)
+                .borderRound(4.0f)
+                .build();
+    }
+
+    public static CheckboxComponent createCheckbox(String id, boolean checked) {
+        return CheckboxComponent.builder(id)
+                .checked(checked)
+                .borderRound(3.0f)
+                .build();
+    }
+
+    public static Container createCard(String id, float width, float height, Color bg, float borderRound) {
+        return Container.builder(id)
+                .size(width, height)
+                .backgroundColor(bg)
+                .borderRound(borderRound)
+                .build();
+    }
+
+    public static TextComponent createText(String id, Component text, float width, float height,
+                                          UiTextAlignment alignment, float fontSize) {
+        return TextComponent.builder(id)
+                .size(width, height)
+                .text(text)
+                .alignment(alignment)
+                .fontSize(fontSize)
+                .build();
+    }
+
+    public static ShapeComponent createShape(String id, String shapeType, float width, float height,
+                                            Color color, float borderRound) {
+        return ShapeComponent.builder(id)
+                .shapeType(shapeType)
+                .size(width, height)
+                .color(color)
+                .borderRound(borderRound)
+                .build();
+    }
+
+    public static IconComponent createIcon(String id, Material material, float width, float height) {
+        return IconComponent.builder(id)
+                .material(material)
+                .size(width, height)
+                .build();
+    }
+
+    public static IconComponent createIcon(String id, ItemStack item, float width, float height) {
+        return IconComponent.builder(id)
+                .item(item)
+                .size(width, height)
+                .build();
     }
 }
