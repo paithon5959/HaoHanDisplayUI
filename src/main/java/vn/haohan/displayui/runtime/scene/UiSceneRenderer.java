@@ -220,6 +220,8 @@ final class UiSceneRenderer {
             display.setSeeThrough(node.seeThrough());
             display.setAlignment(node.alignment());
             display.setLineWidth(node.lineWidth());
+            display.setDefaultBackground(false);
+            display.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
         });
     }
 
@@ -232,6 +234,7 @@ final class UiSceneRenderer {
             display.setLineWidth(Math.max(1, Math.round(node.width() * 20.0f / node.fontSize())));
             display.setShadowed(node.shadow());
             display.setSeeThrough(node.seeThrough());
+            display.setDefaultBackground(false);
             display.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
             display.setTextOpacity((byte) 255);
         });

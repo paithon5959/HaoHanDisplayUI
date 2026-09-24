@@ -25,8 +25,10 @@ import vn.haohan.displayui.api.icon.UiIconRegistry;
 import vn.haohan.displayui.api.view.UiAudience;
 import vn.haohan.displayui.runtime.scene.UiScene;
 import vn.haohan.displayui.utils.MathUtils;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.Location;
@@ -43,9 +45,11 @@ import java.util.UUID;
 public final class DisplayUiServiceImpl implements DisplayUiService {
     private final HaoHanDisplayUIPlugin plugin;
     private final UiIconRegistryImpl icons = new UiIconRegistryImpl();
+    private final vn.haohan.displayui.api.debug.UiDebugManager debug = new vn.haohan.displayui.api.debug.UiDebugManager();
     private final Map<UUID, UiScene> scenes = new LinkedHashMap<>();
     private final Map<UUID, HoverTarget> hovered = new LinkedHashMap<>();
     private final Map<UUID, DragSession> dragging = new LinkedHashMap<>();
+    private final Map<UUID, BossBar> debugBossBars = new LinkedHashMap<>();
 
     public DisplayUiServiceImpl(HaoHanDisplayUIPlugin plugin) {
         this.plugin = plugin;
@@ -54,6 +58,11 @@ public final class DisplayUiServiceImpl implements DisplayUiService {
     @Override
     public UiIconRegistry icons() {
         return icons;
+    }
+
+    @Override
+    public vn.haohan.displayui.api.debug.UiDebugManager debug() {
+        return debug;
     }
 
     @Override
@@ -100,6 +109,7 @@ public final class DisplayUiServiceImpl implements DisplayUiService {
         new ArrayList<>(scenes.values()).forEach(UiScene::tick);
         tickDragging();
         tickHoverDescriptions();
+        tickInspectBossBar();
     }
 
     public boolean handleLeftClick(Player player) {
@@ -160,9 +170,13 @@ public final class DisplayUiServiceImpl implements DisplayUiService {
     public void shutdown() {
         Bukkit.getOnlinePlayers().forEach(player -> {
             if (hovered.containsKey(player.getUniqueId())) player.sendActionBar(Component.empty());
+            BossBar bar = debugBossBars.remove(player.getUniqueId());
+            if (bar != null) player.hideBossBar(bar);
         });
         hovered.clear();
         dragging.clear();
+        debugBossBars.clear();
+        debug.clear();
         new ArrayList<>(scenes.values()).forEach(UiScene::remove);
         scenes.clear();
         icons.clear();
@@ -177,6 +191,78 @@ public final class DisplayUiServiceImpl implements DisplayUiService {
             throw new IllegalArgumentException(
                     "ownerKey must be namespaced, for example haohanmetallurgy:forge_guide");
         }
+    }
+
+    private void tickInspectBossBar() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            UUID uuid = player.getUniqueId();
+            var sessionOpt = debug.getSession(uuid);
+            boolean isInspect = sessionOpt.isPresent() && sessionOpt.get().getDebugState().isClickInspectEnabled();
+
+            if (!isInspect) {
+                BossBar bar = debugBossBars.remove(uuid);
+                if (bar != null) {
+                    player.hideBossBar(bar);
+                }
+                continue;
+            }
+
+            UiHit hit = nearestHit(player);
+            Component barTitle;
+            BossBar.Color barColor;
+
+            if (hit != null) {
+                String rawId = interactionId(hit);
+                String type;
+                String targetId;
+
+                if (rawId.startsWith("__inspect_comp_")) {
+                    type = "COMPONENT";
+                    targetId = rawId.substring("__inspect_comp_".length());
+                } else if (rawId.startsWith("__inspect_cont_")) {
+                    type = "CONTAINER";
+                    targetId = rawId.substring("__inspect_cont_".length());
+                } else if (rawId.startsWith("__inspect_layer_")) {
+                    type = "LAYER";
+                    targetId = rawId.substring("__inspect_layer_".length());
+                } else {
+                    type = (hit.control() != null) ? "CONTROL" : "BUTTON";
+                    targetId = rawId;
+                }
+
+                NamedTextColor typeColor = switch (type) {
+                    case "CONTAINER" -> NamedTextColor.AQUA;
+                    case "LAYER" -> NamedTextColor.YELLOW;
+                    default -> NamedTextColor.GREEN;
+                };
+
+                barColor = switch (type) {
+                    case "CONTAINER" -> BossBar.Color.BLUE;
+                    case "LAYER" -> BossBar.Color.YELLOW;
+                    default -> BossBar.Color.GREEN;
+                };
+
+                barTitle = Component.text("🔍 [INSPECT] ", NamedTextColor.GOLD, TextDecoration.BOLD)
+                        .append(Component.text("[" + type + "] ", typeColor, TextDecoration.BOLD))
+                        .append(Component.text(targetId, NamedTextColor.WHITE, TextDecoration.BOLD))
+                        .append(Component.text("  (Nhấp chuột để xem chi tiết)", NamedTextColor.GRAY));
+            } else {
+                barColor = BossBar.Color.GREEN;
+                barTitle = Component.text("🔍 [INSPECT MODE] ", NamedTextColor.GOLD, TextDecoration.BOLD)
+                        .append(Component.text("Hướng tâm nhìn vào UI để chọn Component/Container", NamedTextColor.YELLOW));
+            }
+
+            BossBar currentBar = debugBossBars.get(uuid);
+            if (currentBar == null) {
+                currentBar = BossBar.bossBar(barTitle, 1.0f, barColor, BossBar.Overlay.PROGRESS);
+                debugBossBars.put(uuid, currentBar);
+                player.showBossBar(currentBar);
+            } else {
+                currentBar.name(barTitle);
+                currentBar.color(barColor);
+            }
+        }
+        debugBossBars.keySet().removeIf(id -> Bukkit.getPlayer(id) == null);
     }
 
     private void tickHoverDescriptions() {

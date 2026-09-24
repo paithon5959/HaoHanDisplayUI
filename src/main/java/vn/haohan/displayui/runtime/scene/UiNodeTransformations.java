@@ -68,11 +68,52 @@ final class UiNodeTransformations {
         } else if (node instanceof TriangleNode triangle) {
             return scene.computeTriangleTransforms(triangle, scale, offsetX, offsetY, offsetZ);
         } else if (node instanceof UiShapeNode shape) {
-            UiShapeNode scaledShape = (Math.abs(scale - 1.0f) > 1e-6f) ? shape.scaled(scale) : shape;
-            List<UiNode> subNodes = scaledShape.decomposeToNodes();
+            List<UiNode> subNodes = shape.decomposeToNodes();
             List<Transformation> list = new java.util.ArrayList<>();
+            boolean isScaled = Math.abs(scale - 1.0f) > 1e-6f;
+            float cx = shape.x() + shape.width() * 0.5f;
+            float cy = shape.y() + shape.height() * 0.5f;
+
             for (UiNode sub : subNodes) {
-                list.addAll(resolve(scene, sub, 1.0f, offsetX, offsetY, offsetZ));
+                if (!isScaled) {
+                    list.addAll(resolve(scene, sub, 1.0f, offsetX, offsetY, offsetZ));
+                } else if (sub instanceof UiBackgroundNode bg) {
+                    float subW = bg.width() * scale;
+                    float subH = bg.height() * scale;
+                    float subCx = bg.x() + bg.width() * 0.5f;
+                    float subCy = bg.y() + bg.height() * 0.5f;
+                    float newX = cx + (subCx - cx) * scale - subW * 0.5f;
+                    float newY = cy + (subCy - cy) * scale - subH * 0.5f;
+                    UiBackgroundNode scaledBg = new UiBackgroundNode(newX, newY, bg.depth(), subW, subH, bg.background(), bg.doubleSided());
+                    list.addAll(resolve(scene, scaledBg, 1.0f, offsetX, offsetY, offsetZ));
+                } else if (sub instanceof TriangleNode tri) {
+                    float x1 = cx + (tri.x1() - cx) * scale;
+                    float y1 = cy + (tri.y1() - cy) * scale;
+                    float x2 = cx + (tri.x2() - cx) * scale;
+                    float y2 = cy + (tri.y2() - cy) * scale;
+                    float x3 = cx + (tri.x3() - cx) * scale;
+                    float y3 = cy + (tri.y3() - cy) * scale;
+                    TriangleNode scaledTri = new TriangleNode(x1, y1, x2, y2, x3, y3, tri.depth(), tri.color(), tri.doubleSided());
+                    list.addAll(resolve(scene, scaledTri, 1.0f, offsetX, offsetY, offsetZ));
+                } else if (sub instanceof ParallelogramNode para) {
+                    float x1 = cx + (para.x1() - cx) * scale;
+                    float y1 = cy + (para.y1() - cy) * scale;
+                    float x2 = cx + (para.x2() - cx) * scale;
+                    float y2 = cy + (para.y2() - cy) * scale;
+                    float x3 = cx + (para.x3() - cx) * scale;
+                    float y3 = cy + (para.y3() - cy) * scale;
+                    ParallelogramNode scaledPara = new ParallelogramNode(x1, y1, x2, y2, x3, y3, para.depth(), para.color(), para.doubleSided());
+                    list.addAll(resolve(scene, scaledPara, 1.0f, offsetX, offsetY, offsetZ));
+                } else if (sub instanceof LineNode line) {
+                    float x1 = cx + (line.x1() - cx) * scale;
+                    float y1 = cy + (line.y1() - cy) * scale;
+                    float x2 = cx + (line.x2() - cx) * scale;
+                    float y2 = cy + (line.y2() - cy) * scale;
+                    LineNode scaledLine = new LineNode(x1, y1, x2, y2, line.thickness() * scale, line.depth(), line.color(), line.doubleSided());
+                    list.addAll(resolve(scene, scaledLine, 1.0f, offsetX, offsetY, offsetZ));
+                } else {
+                    list.addAll(resolve(scene, sub, scale, offsetX, offsetY, offsetZ));
+                }
             }
             return list;
         } else if (node instanceof PolylineNode polyline) {
