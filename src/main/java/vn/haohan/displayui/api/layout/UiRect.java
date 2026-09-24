@@ -57,11 +57,11 @@ public record UiRect(float x, float y, float width, float height) {
         return y + height * 0.5f;
     }
 
-    public float anchorX(UiAnchor anchor) {
+    public float anchorX(UiAnchorPoint anchor) {
         return x + width * Objects.requireNonNull(anchor, "anchor").xFactor();
     }
 
-    public float anchorY(UiAnchor anchor) {
+    public float anchorY(UiAnchorPoint anchor) {
         return y + height * Objects.requireNonNull(anchor, "anchor").yFactor();
     }
 
@@ -91,7 +91,7 @@ public record UiRect(float x, float y, float width, float height) {
      * Places a child rectangle by joining one of its anchors to an anchor of
      * this rectangle, then applying a logical-pixel offset.
      */
-    public UiRect place(UiAnchor parentAnchor, UiAnchor childAnchor,
+    public UiRect place(UiAnchorPoint parentAnchor, UiAnchorPoint childAnchor,
                         float childWidth, float childHeight,
                         float offsetX, float offsetY) {
         Objects.requireNonNull(parentAnchor, "parentAnchor");
