@@ -576,7 +576,10 @@ public final class UiScene implements UiHandle {
             interactionEntity = null;
             return;
         }
-        if (interactionEntity == null || !interactionEntity.isValid()) return;
+        if (interactionEntity == null || !interactionEntity.isValid()) {
+            spawnInteraction();
+            return;
+        }
 
         UiInteractionBounds.Bounds bounds = UiInteractionBounds.calculate(
                 document, controlStates.values(), origin, options.pixelsPerBlock(), cameraTransform);
@@ -1363,17 +1366,7 @@ public final class UiScene implements UiHandle {
             display.setInterpolationDelay(0);
             display.setInterpolationDuration(ANIMATION_INTERPOLATION_TICKS);
             display.setTransformation(transforms.get(j));
-            if (display instanceof TextDisplay textDisplay) {
-                if (node instanceof UiBackgroundNode background) {
-                    textDisplay.setTextOpacity((byte) 0);
-                    textDisplay.setBackgroundColor(ColorUtils.withOpacity(background.background(), opacity));
-                } else if (node instanceof UiGradientBackgroundNode gradient) {
-                    textDisplay.setTextOpacity((byte) 0);
-                    textDisplay.setBackgroundColor(ColorUtils.withOpacity(gradient.colorForDisplayIndex(j), opacity));
-                } else {
-                    textDisplay.setTextOpacity((byte) Math.round(opacity * 255.0f));
-                }
-            }
+            applyOpacityToDisplay(display, node, opacity, (byte) Math.round(opacity * 255.0f), j);
         }
     }
 
@@ -1404,17 +1397,7 @@ public final class UiScene implements UiHandle {
                 display.setInterpolationDelay(0);
                 display.setInterpolationDuration(interpolationTicks);
                 display.setTransformation(transforms.get(j));
-                if (display instanceof TextDisplay textDisplay) {
-                    if (node instanceof UiBackgroundNode background) {
-                        textDisplay.setTextOpacity((byte) 0);
-                        textDisplay.setBackgroundColor(ColorUtils.withOpacity(background.background(), opacity));
-                    } else if (node instanceof UiGradientBackgroundNode gradient) {
-                        textDisplay.setTextOpacity((byte) 0);
-                        textDisplay.setBackgroundColor(ColorUtils.withOpacity(gradient.colorForDisplayIndex(j), opacity));
-                    } else {
-                        textDisplay.setTextOpacity(opacityByte);
-                    }
-                }
+                applyOpacityToDisplay(display, node, opacity, opacityByte, j);
             }
         }
     }
@@ -1431,6 +1414,7 @@ public final class UiScene implements UiHandle {
             UiNode node = document.nodes().get(i);
             List<Display> displays = nodeEntities.get(i);
             if (displays == null) continue;
+            if (a == null || a.isStatic() || a.durationTicks() <= 0) continue;
 
             float scale = 1.0f;
             float offsetX = 0.0f;
@@ -1466,17 +1450,36 @@ public final class UiScene implements UiHandle {
                 display.setInterpolationDelay(0);
                 display.setInterpolationDuration(interpolationTicks);
                 display.setTransformation(transforms.get(j));
-                if (display instanceof TextDisplay textDisplay) {
-                    if (node instanceof UiBackgroundNode background) {
-                        textDisplay.setTextOpacity((byte) 0);
-                        textDisplay.setBackgroundColor(ColorUtils.withOpacity(background.background(), opacity));
-                    } else if (node instanceof UiGradientBackgroundNode gradient) {
-                        textDisplay.setTextOpacity((byte) 0);
-                        textDisplay.setBackgroundColor(ColorUtils.withOpacity(gradient.colorForDisplayIndex(j), opacity));
-                    } else {
-                        textDisplay.setTextOpacity(opacityByte);
-                    }
-                }
+                applyOpacityToDisplay(display, node, opacity, opacityByte, j);
+            }
+        }
+    }
+
+    private void applyOpacityToDisplay(Display display, UiNode node, float opacity, byte opacityByte, int displayIndex) {
+        if (display instanceof TextDisplay textDisplay) {
+            if (node instanceof UiBackgroundNode background) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(ColorUtils.withOpacity(background.background(), opacity));
+            } else if (node instanceof UiGradientBackgroundNode gradient) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(ColorUtils.withOpacity(gradient.colorForDisplayIndex(displayIndex), opacity));
+            } else if (node instanceof UiShapeNode shape) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(ColorUtils.withOpacity(shape.color(), opacity));
+            } else if (node instanceof LineNode line) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(ColorUtils.withOpacity(line.color(), opacity));
+            } else if (node instanceof ParallelogramNode para) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(ColorUtils.withOpacity(para.color(), opacity));
+            } else if (node instanceof TriangleNode tri) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(ColorUtils.withOpacity(tri.color(), opacity));
+            } else if (node instanceof PolylineNode poly) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(ColorUtils.withOpacity(poly.color(), opacity));
+            } else {
+                textDisplay.setTextOpacity(opacityByte);
             }
         }
     }
@@ -1498,9 +1501,36 @@ public final class UiScene implements UiHandle {
                 display.setInterpolationDelay(0);
                 display.setInterpolationDuration(interpolationTicks);
                 display.setTransformation(transforms.get(j));
-                if (display instanceof TextDisplay textDisplay) {
-                    textDisplay.setTextOpacity((byte) 255);
-                }
+                resetDisplayOpacity(display, node, j);
+            }
+        }
+    }
+
+    private void resetDisplayOpacity(Display display, UiNode node, int displayIndex) {
+        if (display instanceof TextDisplay textDisplay) {
+            if (node instanceof UiBackgroundNode background) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(background.background());
+            } else if (node instanceof UiGradientBackgroundNode gradient) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(gradient.colorForDisplayIndex(displayIndex));
+            } else if (node instanceof UiShapeNode shape) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(shape.color());
+            } else if (node instanceof LineNode line) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(line.color());
+            } else if (node instanceof ParallelogramNode para) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(para.color());
+            } else if (node instanceof TriangleNode tri) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(tri.color());
+            } else if (node instanceof PolylineNode poly) {
+                textDisplay.setTextOpacity((byte) 0);
+                textDisplay.setBackgroundColor(poly.color());
+            } else {
+                textDisplay.setTextOpacity((byte) 255);
             }
         }
     }
@@ -1705,10 +1735,57 @@ public final class UiScene implements UiHandle {
         entities.addAll(newDisplays);
     }
 
+    public static boolean isStructurallySimilar(UiDocument previous, UiDocument next) {
+        if (previous == null || next == null) return false;
+        int prevSize = previous.nodes().size();
+        int nextSize = next.nodes().size();
+        if (prevSize == 0 || nextSize == 0) return prevSize == nextSize;
+
+        // If the size ratio is too disparate, treat as page change
+        float sizeRatio = (float) Math.min(prevSize, nextSize) / (float) Math.max(prevSize, nextSize);
+        if (sizeRatio < 0.5f) return false;
+
+        int common = Math.min(prevSize, nextSize);
+        int matched = 0;
+        float maxAllowedDrift = 15.0f; // in pixels
+
+        for (int i = 0; i < common; i++) {
+            UiNode prev = previous.nodes().get(i);
+            UiNode curr = next.nodes().get(i);
+            if (prev.getClass().equals(curr.getClass())) {
+                float dx = Math.abs(nodeX(prev) - nodeX(curr));
+                float dy = Math.abs(nodeY(prev) - nodeY(curr));
+                if (dx <= maxAllowedDrift && dy <= maxAllowedDrift) {
+                    matched++;
+                }
+            }
+        }
+
+        float matchRatio = (float) matched / (float) Math.max(prevSize, nextSize);
+        return matchRatio >= 0.5f;
+    }
+
+    private static float nodeX(UiNode node) {
+        if (node instanceof AlignedTextNode atn) return atn.boxX();
+        return node.x();
+    }
+
+    private static float nodeY(UiNode node) {
+        if (node instanceof AlignedTextNode atn) return atn.boxY();
+        return node.y();
+    }
+
     private boolean incrementalUpdate(UiDocument previous, UiDocument next) {
-        if (previous == null || previous.nodes().size() != next.nodes().size()
-                || nodeEntities.size() != next.nodes().size()) return false;
-        for (int i = 0; i < next.nodes().size(); i++) {
+        if (previous == null || nodeEntities == null) return false;
+        if (!isStructurallySimilar(previous, next)) {
+            return false;
+        }
+
+        int prevSize = previous.nodes().size();
+        int nextSize = next.nodes().size();
+        int common = Math.min(prevSize, nextSize);
+
+        for (int i = 0; i < common; i++) {
             UiNode prev = previous.nodes().get(i);
             UiNode curr = next.nodes().get(i);
             if (Objects.equals(prev, curr)) continue;
@@ -1717,12 +1794,34 @@ public final class UiScene implements UiHandle {
                 continue;
             }
             List<Transformation> expected = UiNodeTransformations.resolve(this, curr, 1.0f, 0.0f, 0.0f, 0.0f);
-            if (nodeEntities.get(i).size() != expected.size()) {
+            if (i >= nodeEntities.size() || nodeEntities.get(i).size() != expected.size()) {
                 rebuildNodeDisplays(i, curr);
             } else {
                 renderer.updateNode(nodeEntities.get(i), curr);
             }
         }
+
+        if (nextSize > prevSize) {
+            for (int i = prevSize; i < nextSize; i++) {
+                UiNode curr = next.nodes().get(i);
+                List<Display> spawned = renderer.spawnNode(curr);
+                nodeEntities.add(spawned);
+                entities.addAll(spawned);
+            }
+        } else if (nextSize < prevSize) {
+            for (int i = prevSize - 1; i >= nextSize; i--) {
+                if (i < nodeEntities.size()) {
+                    List<Display> oldDisplays = nodeEntities.remove(i);
+                    if (oldDisplays != null) {
+                        for (Display d : oldDisplays) {
+                            if (d != null && d.isValid()) d.remove();
+                        }
+                        entities.removeAll(oldDisplays);
+                    }
+                }
+            }
+        }
+
         updateInteractionHitbox();
         return true;
     }
