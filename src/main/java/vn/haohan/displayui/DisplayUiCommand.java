@@ -137,7 +137,7 @@ final class DisplayUiCommand implements CommandExecutor, TabCompleter {
         context.setPageUpdater(ctx -> {
             vn.haohan.displayui.api.layer.LayerManager lm = HierarchicalDemoRenderer.buildLayerManager(pages, ctx);
             debugState.apply(lm);
-            ctx.handle().replace(lm);
+            ctx.handle().update(lm);
         });
 
         vn.haohan.displayui.api.layer.LayerManager initialLm = HierarchicalDemoRenderer.buildLayerManager(pages, context);
@@ -344,7 +344,9 @@ final class DisplayUiCommand implements CommandExecutor, TabCompleter {
     }
 
     private void showPage(DemoContext context) {
-        context.updateView();
+        vn.haohan.displayui.api.layer.LayerManager lm = HierarchicalDemoRenderer.buildLayerManager(pages, context);
+        service.debug().getSession(context.playerId()).ifPresent(s -> s.getDebugState().apply(lm));
+        context.handle().replace(lm);
         DemoPage activePage = pages.get(context.page());
         activePage.onShow(context);
         if (!(activePage instanceof PresetEffectGalleryDemoPage)) {
