@@ -137,9 +137,13 @@ final class UiSceneRenderer {
             updateTextBackground(text, shape.color());
         }
         if (!scene.isAnimating() && transform != null) {
-            if (!Objects.equals(display.getTransformation(), transform)) {
+            Transformation current = display.getTransformation();
+            if (!Objects.equals(current, transform)) {
+                // If translation jump is large (> 0.4 blocks ~ 32px), snap immediately without interpolation
+                float distSq = current != null ? current.getTranslation().distanceSquared(transform.getTranslation()) : 0.0f;
+                int duration = (current == null || distSq > 0.16f) ? 0 : scene.interpolationTicks();
                 display.setInterpolationDelay(0);
-                display.setInterpolationDuration(scene.interpolationTicks());
+                display.setInterpolationDuration(duration);
                 display.setTransformation(transform);
             }
         }
@@ -216,6 +220,8 @@ final class UiSceneRenderer {
             display.setSeeThrough(node.seeThrough());
             display.setAlignment(node.alignment());
             display.setLineWidth(node.lineWidth());
+            display.setDefaultBackground(false);
+            display.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
         });
     }
 
@@ -228,6 +234,7 @@ final class UiSceneRenderer {
             display.setLineWidth(Math.max(1, Math.round(node.width() * 20.0f / node.fontSize())));
             display.setShadowed(node.shadow());
             display.setSeeThrough(node.seeThrough());
+            display.setDefaultBackground(false);
             display.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
             display.setTextOpacity((byte) 255);
         });

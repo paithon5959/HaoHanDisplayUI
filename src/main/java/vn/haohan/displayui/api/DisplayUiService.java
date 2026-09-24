@@ -28,9 +28,29 @@ import java.util.UUID;
 
 public interface DisplayUiService {
     UiIconRegistry icons();
+    vn.haohan.displayui.api.debug.UiDebugManager debug();
     UiHandle create(String ownerKey, Location origin, UiDocument document);
     UiHandle create(String ownerKey, Location origin, UiDocument document,
                     UiOptions options, UiAudience audience);
+
+    default UiHandle create(String ownerKey, Location origin, vn.haohan.displayui.api.layer.LayerManager layerManager) {
+        UiHandle handle = create(ownerKey, origin, vn.haohan.displayui.api.bridge.UiDocumentBridge.compile(layerManager));
+        vn.haohan.displayui.api.bridge.UiDocumentBridge.bindInteractions(handle, layerManager);
+        return handle;
+    }
+
+    default UiHandle create(String ownerKey, Location origin, vn.haohan.displayui.api.layer.LayerManager layerManager,
+                            UiOptions options, UiAudience audience) {
+        UiHandle handle = create(ownerKey, origin, vn.haohan.displayui.api.bridge.UiDocumentBridge.compile(layerManager), options, audience);
+        vn.haohan.displayui.api.bridge.UiDocumentBridge.bindInteractions(handle, layerManager);
+        return handle;
+    }
+
+    default UiHandle create(String ownerKey, Location origin, vn.haohan.displayui.api.container.Container container) {
+        vn.haohan.displayui.api.layer.LayerManager manager = new vn.haohan.displayui.api.layer.LayerManager();
+        manager.createLayer("root_layer", 0).addContainer(container);
+        return create(ownerKey, origin, manager);
+    }
     Optional<UiHandle> find(UUID id);
     Collection<UiHandle> active();
     int removeOwnedBy(String ownerKey);

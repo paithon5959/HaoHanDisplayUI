@@ -474,9 +474,9 @@ class UiShapeNodeTest {
         vn.haohan.displayui.demo.pages.GeometricShapesDemoPage page = new vn.haohan.displayui.demo.pages.GeometricShapesDemoPage();
         vn.haohan.displayui.demo.DemoContext context = new vn.haohan.displayui.demo.DemoContext(java.util.UUID.randomUUID());
 
-        UiDocument.Builder builder = UiDocument.builder();
-        page.build(builder, context);
-        UiDocument doc = builder.build();
+        vn.haohan.displayui.api.container.Container container = vn.haohan.displayui.api.container.Container.builder("test_shapes").build();
+        page.build(container, context);
+        UiDocument doc = vn.haohan.displayui.api.bridge.UiDocumentBridge.compile(container);
 
         assertNotNull(doc);
         assertTrue(doc.nodes().size() >= 24, "Should build at least 24 shape nodes + labels");

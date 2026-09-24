@@ -37,4 +37,11 @@ public enum UiAnchor {
     public float yFactor() {
         return yFactor;
     }
+
+    /**
+     * Converts to the unified {@link UiAnchorPoint} enum.
+     */
+    public UiAnchorPoint toPoint() {
+        return UiAnchorPoint.fromLegacy(this);
+    }
 }

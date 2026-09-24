@@ -42,6 +42,59 @@ public final class UiEffects {
         return UiAnimation.slideIn(16, UiAnimation.Direction.BOTTOM, 22, Easings.OutCubic);
     }
 
+    // ── Slide present animations (dropdown-optimised) ────────────────────────
+
+    /**
+     * Slides a dropdown panel in from the top – suitable for menus that expand
+     * downward (e.g. a combo-box opening below its trigger).
+     *
+     * <p>The panel starts above its final position and fades in simultaneously,
+     * giving a natural "unrolling" feel without the bounce of {@link #dropIn()}.
+     */
+    public static UiAnimation slidePresentDown() {
+        return UiAnimation.builder()
+                .durationTicks(12).easing(Easings.OutQuart)
+                .opacity(0.0f, 1.0f)
+                .offset(UiAnimation.Direction.TOP, 16)
+                .build();
+    }
+
+    /**
+     * Slides a dropdown panel in from the bottom – suitable for menus that
+     * expand upward (e.g. a combo-box opening above its trigger).
+     */
+    public static UiAnimation slidePresentUp() {
+        return UiAnimation.builder()
+                .durationTicks(12).easing(Easings.OutQuart)
+                .opacity(0.0f, 1.0f)
+                .offset(UiAnimation.Direction.BOTTOM, 16)
+                .build();
+    }
+
+    /**
+     * Slides a dropdown panel in from the right – suitable for side-panels or
+     * sub-menus that open to the left of their trigger.
+     */
+    public static UiAnimation slidePresentLeft() {
+        return UiAnimation.builder()
+                .durationTicks(12).easing(Easings.OutQuart)
+                .opacity(0.0f, 1.0f)
+                .offset(UiAnimation.Direction.RIGHT, 20)
+                .build();
+    }
+
+    /**
+     * Slides a dropdown panel in from the left – suitable for side-panels or
+     * sub-menus that open to the right of their trigger.
+     */
+    public static UiAnimation slidePresentRight() {
+        return UiAnimation.builder()
+                .durationTicks(12).easing(Easings.OutQuart)
+                .opacity(0.0f, 1.0f)
+                .offset(UiAnimation.Direction.LEFT, 20)
+                .build();
+    }
+
     public static UiAnimation popIn() {
         return UiAnimation.builder().durationTicks(18).easing(Easings.BackOut)
                 .opacity(0.0f, 1.0f).scale(0.72f, 1.0f).build();
@@ -85,7 +138,8 @@ public final class UiEffects {
     public static List<UiAnimation> gallery() {
         return List.of(fadeIn(), slideInFromLeft(), slideInFromRight(),
                 slideInFromTop(), slideInFromBottom(), popIn(),
-                scaleIn(), bounceIn(),
-                dropIn(), softRise());
+                scaleIn(), bounceIn(), dropIn(), softRise(),
+                slidePresentDown(), slidePresentUp(),
+                slidePresentLeft(), slidePresentRight());
     }
 }

@@ -32,27 +32,31 @@ import vn.haohan.displayui.api.animation.Easings;
 import vn.haohan.displayui.api.interaction.UiControlChange;
 import vn.haohan.displayui.demo.DemoContext;
 import vn.haohan.displayui.demo.DemoPage;
-import vn.haohan.displayui.demo.DemoUiRenderer;
+import vn.haohan.displayui.demo.HierarchicalDemoRenderer;
 import vn.haohan.displayui.demo.pages.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
 final class DisplayUiCommand implements CommandExecutor, TabCompleter {
     private static final List<String> SUBCOMMANDS = List.of(
-            "demo", "clear", "stats", "page", "follow", "camera", "open", "close", "list", "reload");
+            "demo", "test", "clear", "stats", "page", "follow", "camera", "open", "close", "list", "reload", "debug");
     private static final List<String> FOLLOW_OPTIONS = List.of("none", "follow");
     private static final List<String> CAMERA_PRESETS = List.of("fixed", "face_player", "tilt_up", "tilt_down", "rotate_left", "rotate_right", "skew", "reset");
 
     private final HaoHanDisplayUIPlugin plugin;
     private final DisplayUiService service;
     private final vn.haohan.displayui.runtime.UiLayoutManager layoutManager;
+    private final vn.haohan.displayui.runtime.debug.UiDebugCommandHandler debugHandler;
     private final Map<UUID, DemoContext> demos = new HashMap<>();
+    private final Map<UUID, vn.haohan.displayui.api.UiHandle> activeVisualTests = new HashMap<>();
     private final List<DemoPage> pages;
 
     DisplayUiCommand(HaoHanDisplayUIPlugin plugin, DisplayUiService service,
@@ -60,6 +64,7 @@ final class DisplayUiCommand implements CommandExecutor, TabCompleter {
         this.plugin = Objects.requireNonNull(plugin, "plugin");
         this.service = Objects.requireNonNull(service, "service");
         this.layoutManager = Objects.requireNonNull(layoutManager, "layoutManager");
+        this.debugHandler = new vn.haohan.displayui.runtime.debug.UiDebugCommandHandler(service.debug());
         this.pages = List.of(
                 new TextStylesDemoPage(),
                 new ListLayoutsDemoPage(),
@@ -71,21 +76,28 @@ final class DisplayUiCommand implements CommandExecutor, TabCompleter {
                 new ChooseAppScrollListDemoPage(),
                 new ActionsLinkCommandDemoPage(),
                 new CameraAxisLockDemoPage(),
-                new GradientBackgroundDemoPage()
+                new GradientBackgroundDemoPage(),
+                new SettingsDemoPage()
         );
         plugin.getServer().getScheduler().runTaskTimer(plugin, this::animateDemos, 1L, 1L);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!sender.hasPermission("haohan.displayui.admin")) {
+        if (!sender.hasPermission("haohan.displayui.admin") && !sender.hasPermission("haohan.displayui.debug")
+                && !sender.hasPermission("haohansmp.displayui.admin") && !sender.isOp()) {
             sender.sendMessage("§cYou do not have permission to use this command.");
             return true;
         }
 
-        String sub = (args.length > 0) ? args[0].toLowerCase() : "demo";
+        if (command.getName().equalsIgnoreCase("uidebug") || command.getName().equalsIgnoreCase("hhduidbg")) {
+            return debugHandler.execute(sender, args, "/" + command.getName().toLowerCase(Locale.ROOT));
+        }
+
+        String sub = (args.length > 0) ? args[0].toLowerCase(Locale.ROOT) : "demo";
         return switch (sub) {
             case "demo" -> startDemo(sender);
+            case "test" -> startVisualTest(sender, args);
             case "clear" -> clear(sender);
             case "stats" -> stats(sender);
             case "page" -> setPage(sender, args);
@@ -95,11 +107,17 @@ final class DisplayUiCommand implements CommandExecutor, TabCompleter {
             case "close" -> closeLayout(sender, args);
             case "list" -> listLayouts(sender);
             case "reload" -> reload(sender);
+            case "debug" -> handleDebug(sender, args);
             default -> {
-                sender.sendMessage("§cUnknown subcommand. Use /hhdui <demo|clear|stats|page|follow|camera|open|close|list|reload>");
+                sender.sendMessage("§cUnknown subcommand. Use /hhdui <demo|clear|stats|page|follow|camera|open|close|list|reload|debug>");
                 yield true;
             }
         };
+    }
+
+    private boolean handleDebug(CommandSender sender, String[] args) {
+        String[] subArgs = (args.length > 1) ? Arrays.copyOfRange(args, 1, args.length) : new String[0];
+        return debugHandler.execute(sender, subArgs, "/hhdui debug");
     }
 
     private boolean startDemo(CommandSender sender) {
@@ -115,14 +133,49 @@ final class DisplayUiCommand implements CommandExecutor, TabCompleter {
         origin.setYaw(player.getLocation().getYaw() + 180.0f);
         origin.setPitch(0.0f);
         DemoContext context = new DemoContext(player.getUniqueId());
-        context.setPageUpdater(ctx -> ctx.handle().update(DemoUiRenderer.render(pages, ctx)));
+        vn.haohan.displayui.api.debug.UiDebugState debugState = new vn.haohan.displayui.api.debug.UiDebugState();
+        context.setPageUpdater(ctx -> {
+            vn.haohan.displayui.api.layer.LayerManager lm = HierarchicalDemoRenderer.buildLayerManager(pages, ctx);
+            debugState.apply(lm);
+            ctx.handle().update(lm);
+        });
+
+        vn.haohan.displayui.api.layer.LayerManager initialLm = HierarchicalDemoRenderer.buildLayerManager(pages, context);
+        debugState.apply(initialLm);
 
         context.handle(service.create(demoOwner(player.getUniqueId()), origin,
-                DemoUiRenderer.render(pages, context),
+                initialLm,
                 new UiOptions(80.0f, 12.0, false, 0.2f, "haohan_display_ui", context.cameraTransform())
                         .withSides(context.doubleSided(), context.mirrorSide()),
                 candidate -> candidate.getUniqueId().equals(player.getUniqueId())));
         context.handle().scrollAnimation(UiScrollAnimations.slide());
+
+        vn.haohan.displayui.api.debug.UiDebugSession demoSession = new vn.haohan.displayui.api.debug.UiDebugSession() {
+            @Override
+            public String name() {
+                return "Demo UI (Page " + (context.page() + 1) + ")";
+            }
+
+            @Override
+            public vn.haohan.displayui.api.layer.LayerManager getCurrentLayerManager() {
+                vn.haohan.displayui.api.layer.LayerManager lm = HierarchicalDemoRenderer.buildLayerManager(pages, context);
+                debugState.apply(lm);
+                return lm;
+            }
+
+            @Override
+            public vn.haohan.displayui.api.debug.UiDebugState getDebugState() {
+                return debugState;
+            }
+
+            @Override
+            public void forceUpdate() {
+                if (context.handle() != null && context.handle().isValid()) {
+                    context.handle().update(getCurrentLayerManager());
+                }
+            }
+        };
+        service.debug().registerSession(player.getUniqueId(), demoSession);
 
         context.handle().onClick(click -> onDemoClick(context, click.button().id(), click.player()));
         context.handle().onControlChange(change -> onDemoControlChange(context, change));
@@ -135,13 +188,115 @@ final class DisplayUiCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    private boolean startVisualTest(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§cThis command must be run by a player.");
+            return true;
+        }
+
+        if (args.length < 2) {
+            sender.sendMessage("§6--- Available Visual Tests ---");
+            sender.sendMessage("§7Usage: §e/hhdui test <type>");
+            for (String t : vn.haohan.displayui.demo.visual.VisualTestFactory.TEST_TYPES) {
+                sender.sendMessage(" §7- §b/hhdui test " + t);
+            }
+            return true;
+        }
+
+        String testType = args[1].toLowerCase();
+        vn.haohan.displayui.api.layer.LayerManager lm = vn.haohan.displayui.demo.visual.VisualTestFactory.createTest(testType);
+        if (lm == null) {
+            sender.sendMessage("§cUnknown test type '§e" + testType + "§c'. Choose from: "
+                    + String.join(", ", vn.haohan.displayui.demo.visual.VisualTestFactory.TEST_TYPES));
+            return true;
+        }
+
+        cleanupExisting(player.getUniqueId());
+
+        Location origin = player.getEyeLocation()
+                .add(player.getEyeLocation().getDirection().multiply(3.0));
+        origin.setYaw(player.getLocation().getYaw() + 180.0f);
+        origin.setPitch(0.0f);
+
+        vn.haohan.displayui.api.debug.UiDebugState testDebugState = new vn.haohan.displayui.api.debug.UiDebugState();
+        testDebugState.apply(lm);
+
+        vn.haohan.displayui.api.UiHandle handle = service.create(
+                demoOwner(player.getUniqueId()),
+                origin,
+                vn.haohan.displayui.api.bridge.UiDocumentBridge.compile(lm),
+                new UiOptions(80.0f, 12.0, false, 0.2f, "haohan_display_ui", vn.haohan.displayui.api.layout.UiCameraTransform.fixed()),
+                candidate -> candidate.getUniqueId().equals(player.getUniqueId())
+        );
+
+        vn.haohan.displayui.api.bridge.UiDocumentBridge.bindInteractions(handle, lm);
+
+        vn.haohan.displayui.api.debug.UiDebugSession testSession = new vn.haohan.displayui.api.debug.UiDebugSession() {
+            @Override
+            public String name() {
+                return "Visual Test (" + testType + ")";
+            }
+
+            @Override
+            public vn.haohan.displayui.api.layer.LayerManager getCurrentLayerManager() {
+                vn.haohan.displayui.api.layer.LayerManager lmTest = vn.haohan.displayui.demo.visual.VisualTestFactory.createTest(testType);
+                if (lmTest != null) testDebugState.apply(lmTest);
+                return lmTest;
+            }
+
+            @Override
+            public vn.haohan.displayui.api.debug.UiDebugState getDebugState() {
+                return testDebugState;
+            }
+
+            @Override
+            public void forceUpdate() {
+                if (handle != null && handle.isValid()) {
+                    vn.haohan.displayui.api.layer.LayerManager lmTest = getCurrentLayerManager();
+                    if (lmTest != null) handle.update(lmTest);
+                }
+            }
+        };
+        service.debug().registerSession(player.getUniqueId(), testSession);
+
+        handle.onClick(click -> {
+            vn.haohan.displayui.api.debug.UiDebugSession s = service.debug().getSession(player.getUniqueId()).orElse(null);
+            if (s != null && s.handleInspectClick(player, click.button().id(), "/hhdui debug")) {
+                return;
+            }
+            player.sendMessage("§e[Visual Test] §aClicked: §f" + click.button().id());
+        });
+
+        handle.onControlChange(change -> {
+            String val = (change.control() instanceof vn.haohan.displayui.api.interaction.UiCheckbox)
+                    ? (change.checked() ? "§aTRUE" : "§cFALSE")
+                    : String.format("§e%.2f", change.value());
+            player.sendMessage("§e[Visual Test] §bControl " + change.control().id() + " changed -> " + val);
+        });
+
+        handle.animate(UiAnimation.fadeIn(8, Easings.OutCubic));
+        activeVisualTests.put(player.getUniqueId(), handle);
+
+        sender.sendMessage("§aVisual Test spawned for '§e" + testType + "§a'.");
+        sender.sendMessage("§7Interact with the display elements or use §b/hhdui clear §7to remove.");
+        return true;
+    }
+
     private void cleanupExisting(UUID playerId) {
+        service.debug().unregisterSession(playerId);
         DemoContext oldDemo = demos.remove(playerId);
         if (oldDemo != null && oldDemo.handle() != null) oldDemo.handle().remove();
+        vn.haohan.displayui.api.UiHandle oldTest = activeVisualTests.remove(playerId);
+        if (oldTest != null && oldTest.isValid()) oldTest.remove();
     }
 
     private void onDemoClick(DemoContext context, String buttonId, Player player) {
         if (context.handle() == null || !context.handle().isValid()) return;
+
+        vn.haohan.displayui.api.debug.UiDebugSession debugSession = service.debug().getSession(player.getUniqueId()).orElse(null);
+        if (debugSession != null && debugSession.handleInspectClick(player, buttonId, "/hhdui debug")) {
+            return;
+        }
 
         switch (buttonId) {
             case "previous_page" -> {
@@ -189,7 +344,9 @@ final class DisplayUiCommand implements CommandExecutor, TabCompleter {
     }
 
     private void showPage(DemoContext context) {
-        context.updateView();
+        vn.haohan.displayui.api.layer.LayerManager lm = HierarchicalDemoRenderer.buildLayerManager(pages, context);
+        service.debug().getSession(context.playerId()).ifPresent(s -> s.getDebugState().apply(lm));
+        context.handle().replace(lm);
         DemoPage activePage = pages.get(context.page());
         activePage.onShow(context);
         if (!(activePage instanceof PresetEffectGalleryDemoPage)) {
@@ -232,6 +389,7 @@ final class DisplayUiCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§6--- HaoHanDisplayUI Stats ---");
         sender.sendMessage("§7Active Scenes: §f" + service.active().size());
         sender.sendMessage("§7Active Demos: §f" + demos.size());
+        sender.sendMessage("§7Active Visual Tests: §f" + activeVisualTests.size());
         return true;
     }
 
@@ -419,15 +577,27 @@ final class DisplayUiCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (!sender.hasPermission("haohan.displayui.admin")) return List.of();
+        if (!sender.hasPermission("haohan.displayui.admin") && !sender.hasPermission("haohan.displayui.debug")
+                && !sender.hasPermission("haohansmp.displayui.admin") && !sender.isOp()) return List.of();
+
+        if (command.getName().equalsIgnoreCase("uidebug") || command.getName().equalsIgnoreCase("hhduidbg")) {
+            return debugHandler.suggest(sender, args);
+        }
 
         if (args.length == 1) {
             return SUBCOMMANDS.stream()
                     .filter(s -> s.startsWith(args[0].toLowerCase()))
                     .toList();
+        } else if (args.length >= 2 && "debug".equalsIgnoreCase(args[0])) {
+            String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
+            return debugHandler.suggest(sender, subArgs);
         } else if (args.length == 2) {
             String sub = args[0].toLowerCase();
-            if ("follow".equals(sub)) {
+            if ("test".equals(sub)) {
+                return vn.haohan.displayui.demo.visual.VisualTestFactory.TEST_TYPES.stream()
+                        .filter(s -> s.startsWith(args[1].toLowerCase()))
+                        .toList();
+            } else if ("follow".equals(sub)) {
                 return FOLLOW_OPTIONS.stream()
                         .filter(s -> s.startsWith(args[1].toLowerCase()))
                         .toList();

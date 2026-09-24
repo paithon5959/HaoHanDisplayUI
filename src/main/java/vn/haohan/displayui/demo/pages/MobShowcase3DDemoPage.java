@@ -1,53 +1,73 @@
+/*
+ * Copyright (C) 2026 HaoHanSMP
+ *
+ * This file is part of HaoHanDisplayUI.
+ *
+ * HaoHanDisplayUI is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ */
 package vn.haohan.displayui.demo.pages;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
-import org.bukkit.Material;
+import org.bukkit.Color;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
-import vn.haohan.displayui.api.UiDocument;
-import vn.haohan.displayui.api.interaction.UiButton;
-import vn.haohan.displayui.api.node.AlignedTextNode;
-import vn.haohan.displayui.api.node.BlockNode;
+import vn.haohan.displayui.api.component.ButtonComponent;
+import vn.haohan.displayui.api.component.CustomNodeComponent;
+import vn.haohan.displayui.api.component.TextComponent;
+import vn.haohan.displayui.api.container.Container;
+import vn.haohan.displayui.api.layout.UiAnchorPoint;
 import vn.haohan.displayui.api.node.MobEntityNode;
 import vn.haohan.displayui.api.text.UiTextAlignment;
 import vn.haohan.displayui.demo.BaseDemoPage;
 import vn.haohan.displayui.demo.DemoContext;
 
 public final class MobShowcase3DDemoPage extends BaseDemoPage {
+
     @Override
     public String title() {
         return "3D MOB SHOWCASE";
     }
 
     @Override
-    public void build(UiDocument.Builder builder, DemoContext context) {
-        final float slotW = 52;
-        final float slotH = 44;
-        final float col1 = -84;
-        final float col2 = -26;
-        final float col3 = 32;
-        final float rowY = -30;
+    public void build(Container container, DemoContext context) {
+        final float slotW = 54.0f;
+        final float slotH = 46.0f;
+        final float[] colsX = {0.0f, 60.0f, 120.0f};
+        final float rowY = 0.0f;
 
-        addMobShowcaseSlot(builder, "mob_allay", EntityType.ALLAY, "ALLAY", NamedTextColor.AQUA,
-                col1, rowY, slotW, slotH, 0.36f,
-                "Allay · Interactive hover & rotation");
+        addMobSlot(container, "mob_allay", colsX[0], rowY, slotW, slotH,
+                EntityType.ALLAY, "ALLAY", NamedTextColor.AQUA, 0.36f);
 
-        addMobShowcaseSlot(builder, "mob_warden", EntityType.WARDEN, "WARDEN", NamedTextColor.DARK_AQUA,
-                col2, rowY, slotW, slotH, 0.46f,
-                "Warden · Full 3D model with custom scale");
+        addMobSlot(container, "mob_warden", colsX[1], rowY, slotW, slotH,
+                EntityType.WARDEN, "WARDEN", NamedTextColor.DARK_AQUA, 0.46f);
 
-        addMobShowcaseSlot(builder, "mob_bee", EntityType.BEE, "BEE", NamedTextColor.GOLD,
-                col3, rowY, slotW, slotH, 0.60f,
-                "Bee · 3D pollinator entity model");
+        addMobSlot(container, "mob_bee", colsX[2], rowY, slotW, slotH,
+                EntityType.BEE, "BEE", NamedTextColor.GOLD, 0.60f);
 
-        builder.add(new AlignedTextNode(Component.text(
-                "Real-time 3D Minecraft mob entities integrated seamlessly into Display UI",
-                NamedTextColor.DARK_GRAY), -86, 18, 172, 7, UiTextAlignment.CENTER).fontSize(4.0f));
+        container.addComponent(TextComponent.builder("mob_subtitle")
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(0.0f, 49.0f)
+                .size(174.0f, 6.0f)
+                .alignment(UiTextAlignment.CENTER)
+                .text(Component.text("Real-time 3D Minecraft mob entities integrated seamlessly into Display UI",
+                        NamedTextColor.GRAY))
+                .fontSize(3.8f)
+                .build());
 
-        addControlButton(builder, "mob_cmd_info", -60, 28, 120, "MODEL PACKS INFO",
-                "Click for details on custom model packs");
+        container.addComponent(ButtonComponent.builder("mob_cmd_info")
+                .anchor(UiAnchorPoint.CENTER_BOTTOM)
+                .origin(UiAnchorPoint.CENTER_BOTTOM)
+                .offset(0.0f, 0.0f)
+                .size(110.0f, 13.0f)
+                .label("MODEL PACKS INFO")
+                .borderRound(3.0f)
+                .build());
     }
 
     @Override
@@ -59,22 +79,49 @@ public final class MobShowcase3DDemoPage extends BaseDemoPage {
         return false;
     }
 
-    private void addMobShowcaseSlot(UiDocument.Builder builder, String id, EntityType entityType,
-                                    String label, NamedTextColor accent, float x, float y,
-                                    float w, float h, float scale, String description) {
-        builder.add(new BlockNode(Material.GRAY_STAINED_GLASS.createBlockData(),
-                x, y, 0.001f, w, h, 1));
-        builder.add(new BlockNode(Material.BLACK_CONCRETE.createBlockData(),
-                x + 1, y + 1, 0.002f, w - 2, h - 2, 1));
+    private void addMobSlot(Container container, String id, float x, float y,
+                            float w, float h, EntityType entityType, String label,
+                            NamedTextColor accent, float scale) {
+        Container slot = Container.builder(id + "_slot")
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(x, y)
+                .size(w, h)
+                .backgroundColor(Color.fromRGB(20, 24, 32))
+                .borderRound(4.0f)
+                .build();
 
-        MobEntityNode mob = new MobEntityNode(entityType, x + w * 0.5f, y + 14, scale);
-        builder.add(mob);
+        // 3D Mob Entity Node via CustomNodeComponent
+        slot.addComponent(CustomNodeComponent.builder(id + "_mob")
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(0.0f, 0.0f)
+                .size(w, h)
+                .factory((gx, gy, sw, sh, d, s) -> new MobEntityNode(entityType, gx + sw * 0.5f, gy + 14.0f, scale * s))
+                .build());
 
-        builder.button(new UiButton(id, x, y, w, h,
-                Component.text(description, NamedTextColor.YELLOW)));
+        // Label
+        slot.addComponent(TextComponent.builder(id + "_title")
+                .anchor(UiAnchorPoint.CENTER_BOTTOM)
+                .origin(UiAnchorPoint.CENTER_BOTTOM)
+                .offset(0.0f, -11.0f)
+                .size(w, 7.0f)
+                .alignment(UiTextAlignment.CENTER)
+                .text(Component.text(label, accent, TextDecoration.BOLD))
+                .fontSize(4.5f)
+                .shadow(true)
+                .build());
 
-        builder.add(new AlignedTextNode(Component.text(label, accent, TextDecoration.BOLD),
-                x, y + 33, w, 7, UiTextAlignment.CENTER)
-                .fontSize(4.5f).shadowed(true).atDepth(0.004f));
+        // Action button
+        slot.addComponent(ButtonComponent.builder(id)
+                .anchor(UiAnchorPoint.CENTER_BOTTOM)
+                .origin(UiAnchorPoint.CENTER_BOTTOM)
+                .offset(0.0f, -2.0f)
+                .size(w - 8.0f, 7.5f)
+                .label("SELECT")
+                .borderRound(2.0f)
+                .build());
+
+        container.addContainer(slot);
     }
 }

@@ -5,12 +5,16 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 import vn.haohan.displayui.api.UiDocument;
 import vn.haohan.displayui.api.UiHit;
+import vn.haohan.displayui.api.interaction.UiButton;
+import vn.haohan.displayui.api.interaction.UiControl;
 import vn.haohan.displayui.api.interaction.UiScrollList;
 import vn.haohan.displayui.api.node.EntityModelNode;
 import vn.haohan.displayui.api.node.MobEntityNode;
 import vn.haohan.displayui.api.node.UiNode;
 import vn.haohan.displayui.runtime.scene.visibility.UiCameraBasis;
 import vn.haohan.displayui.utils.RaycastUtils;
+
+import java.util.List;
 
 /** Owns scene hit testing and the shared screen projection path. */
 final class UiSceneInteractionController {
@@ -25,21 +29,45 @@ final class UiSceneInteractionController {
         RaycastUtils.Projection projection = projectCursor(player);
         if (projection == null) return null;
 
-        UiDocument document = scene.document();
-        UiHit buttonHit = document.buttons().stream()
-                .filter(button -> button.contains(projection.localX(), projection.localY()))
-                .findFirst()
-                .map(button -> new UiHit(scene, button, null, player,
-                        projection.localX(), projection.localY(), projection.distance()))
-                .orElse(null);
-        if (buttonHit != null) return buttonHit;
+        return findHit(scene.document(), scene.controls(),
+                projection.localX(), projection.localY(), player, projection.distance());
+    }
 
-        return scene.controls().stream()
-                .filter(control -> control.contains(projection.localX(), projection.localY()))
-                .findFirst()
-                .map(control -> new UiHit(scene, null, control, player,
-                        projection.localX(), projection.localY(), projection.distance()))
-                .orElse(null);
+    UiHit findHit(UiDocument document, List<UiControl> controls,
+                  float px, float py, Player player, double distance) {
+        if (document == null) return null;
+
+        // 1. Priority 1: Interactive buttons and component inspect hitboxes (__inspect_comp_*)
+        // Evaluated front-to-back (reverse of compilation order so foreground layers and children win)
+        List<UiButton> buttons = document.buttons();
+        for (int i = buttons.size() - 1; i >= 0; i--) {
+            UiButton button = buttons.get(i);
+            if (!button.id().startsWith("__inspect_cont_") && button.contains(px, py)) {
+                return new UiHit(scene, button, null, player, px, py, distance);
+            }
+        }
+
+        // 2. Priority 2: Interactive scene controls (Sliders, Checkboxes, etc.)
+        // Evaluated front-to-back
+        if (controls != null) {
+            for (int i = controls.size() - 1; i >= 0; i--) {
+                UiControl control = controls.get(i);
+                if (control.contains(px, py)) {
+                    return new UiHit(scene, null, control, player, px, py, distance);
+                }
+            }
+        }
+
+        // 3. Priority 3: Container inspect fallback backdrops (__inspect_cont_*)
+        // Evaluated front-to-back (innermost child containers before parent containers, higher layers before lower layers)
+        for (int i = buttons.size() - 1; i >= 0; i--) {
+            UiButton button = buttons.get(i);
+            if (button.id().startsWith("__inspect_cont_") && button.contains(px, py)) {
+                return new UiHit(scene, button, null, player, px, py, distance);
+            }
+        }
+
+        return null;
     }
 
     RaycastUtils.Projection projectCursor(Player player) {
@@ -54,13 +82,15 @@ final class UiSceneInteractionController {
     UiHit scrollHit(Player player) {
         RaycastUtils.Projection projection = projectCursor(player);
         if (projection == null) return null;
-        return scene.controls().stream()
-                .filter(control -> control instanceof UiScrollList
-                        && control.contains(projection.localX(), projection.localY()))
-                .findFirst()
-                .map(control -> new UiHit(scene, null, control, player,
-                        projection.localX(), projection.localY(), projection.distance()))
-                .orElse(null);
+        List<UiControl> controls = scene.controls();
+        for (int i = controls.size() - 1; i >= 0; i--) {
+            UiControl control = controls.get(i);
+            if (control instanceof UiScrollList && control.contains(projection.localX(), projection.localY())) {
+                return new UiHit(scene, null, control, player,
+                        projection.localX(), projection.localY(), projection.distance());
+            }
+        }
+        return null;
     }
 
     int findModelNodeAt(float localX, float localY) {

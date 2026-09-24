@@ -10,11 +10,22 @@ folia-supported: true
 commands:
   hhdui:
     description: HaoHan Display UI engine commands
-    usage: /hhdui <demo|screen2d|clear|stats|page|follow|camera|reload> [page]
+    usage: /hhdui <demo|test|clear|stats|page|follow|camera|open|close|list|reload|debug>
     aliases: [displayui]
+    permission: haohansmp.displayui.admin
+  uidebug:
+    description: HaoHan Display UI inspection and debug tool
+    usage: /uidebug <tree|inspect|clickinspect|layer|container|component|solo|unsolo|showall|hideall|reset|list>
+    aliases: [hhduidbg]
     permission: haohansmp.displayui.admin
 
 permissions:
   haohansmp.displayui.admin:
     description: Manage and test HaoHan Display UI
+    default: op
+  haohan.displayui.admin:
+    description: Manage and test HaoHan Display UI
+    default: op
+  haohan.displayui.debug:
+    description: Debug HaoHan Display UI
     default: op

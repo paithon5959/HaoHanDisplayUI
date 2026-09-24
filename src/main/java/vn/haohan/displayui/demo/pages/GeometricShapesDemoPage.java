@@ -7,14 +7,6 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * HaoHanDisplayUI is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with HaoHanDisplayUI. If not, see <https://www.gnu.org/licenses/>.
  */
 package vn.haohan.displayui.demo.pages;
 
@@ -22,9 +14,11 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Color;
 import org.bukkit.entity.Player;
-import vn.haohan.displayui.api.UiDocument;
-import vn.haohan.displayui.api.node.AlignedTextNode;
-import vn.haohan.displayui.api.node.UiShapeNode;
+import vn.haohan.displayui.api.component.ButtonComponent;
+import vn.haohan.displayui.api.component.ShapeComponent;
+import vn.haohan.displayui.api.component.TextComponent;
+import vn.haohan.displayui.api.container.Container;
+import vn.haohan.displayui.api.layout.UiAnchorPoint;
 import vn.haohan.displayui.api.text.UiTextAlignment;
 import vn.haohan.displayui.demo.BaseDemoPage;
 import vn.haohan.displayui.demo.DemoContext;
@@ -32,8 +26,7 @@ import vn.haohan.displayui.demo.DemoContext;
 import java.util.List;
 
 /**
- * Interactive showcase displaying all 2D shapes with global master outline toggle,
- * selectable line styles (solid / dashed / dotted), and thickness adjustments.
+ * Interactive showcase displaying all 2D shapes using modern ShapeComponent and Container hierarchy.
  */
 public final class GeometricShapesDemoPage extends BaseDemoPage {
 
@@ -79,23 +72,44 @@ public final class GeometricShapesDemoPage extends BaseDemoPage {
     }
 
     @Override
-    public void build(UiDocument.Builder builder, DemoContext context) {
-        // --- TOP MASTER CONTROLS (Y = -39 to -27) ---
+    public void build(Container container, DemoContext context) {
+        // --- TOP MASTER CONTROLS ---
         String outlineLabel = context.shapeOutline() ? "OUTLINE: ON" : "OUTLINE: OFF";
-        addControlButton(builder, "shape_outline_toggle", -86, -39, 52, outlineLabel, "Toggle outline for all shapes");
+        container.addComponent(ButtonComponent.builder("shape_outline_toggle")
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(0.0f, 0.0f)
+                .size(54.0f, 13.0f)
+                .label(outlineLabel)
+                .borderRound(3.0f)
+                .build());
 
         String styleLabel = "STYLE: " + context.lineStyle().toUpperCase();
-        addControlButton(builder, "shape_style_cycle", -28, -39, 56, styleLabel, "Cycle outline style (solid / dashed / dotted)");
+        container.addComponent(ButtonComponent.builder("shape_style_cycle")
+                .anchor(UiAnchorPoint.CENTER_TOP)
+                .origin(UiAnchorPoint.CENTER_TOP)
+                .offset(0.0f, 0.0f)
+                .size(58.0f, 13.0f)
+                .label(styleLabel)
+                .borderRound(3.0f)
+                .build());
 
         String thickLabel = "THICK: " + (int) context.lineThickness() + "px";
-        addControlButton(builder, "shape_thick_cycle", 32, -39, 54, thickLabel, "Cycle line thickness (1px / 2px / 3px / 4px)");
+        container.addComponent(ButtonComponent.builder("shape_thick_cycle")
+                .anchor(UiAnchorPoint.TOP_RIGHT)
+                .origin(UiAnchorPoint.TOP_RIGHT)
+                .offset(0.0f, 0.0f)
+                .size(54.0f, 13.0f)
+                .label(thickLabel)
+                .borderRound(3.0f)
+                .build());
 
-        // --- SHAPE GRID (6 columns x 4 rows, Y from -24.5 to +36, comfortably above footer at +48) ---
-        float startX = -86.0f;
-        float startY = -24.5f;
+        // --- SHAPE GRID (6 columns x 4 rows) ---
+        float startX = 0.0f;
+        float startY = 16.0f;
         float cellW = 26.0f;
-        float cellH = 9.5f;
-        float gapX = 3.0f;
+        float cellH = 10.0f;
+        float gapX = 3.6f;
         float rowStep = 15.0f;
 
         for (int i = 0; i < SHOWCASE_SHAPES.size(); i++) {
@@ -107,25 +121,32 @@ public final class GeometricShapesDemoPage extends BaseDemoPage {
 
             ShapeShowcase shape = SHOWCASE_SHAPES.get(i);
 
-            // Shape Node
-            UiShapeNode node = UiShapeNode.builder(shape.type(), x + 2.0f, y, cellW - 4.0f, cellH)
+            // Shape Component
+            container.addComponent(ShapeComponent.builder("shape_" + i)
+                    .shapeType(shape.type())
+                    .anchor(UiAnchorPoint.TOP_LEFT)
+                    .origin(UiAnchorPoint.TOP_LEFT)
+                    .offset(x + 2.0f, y)
+                    .size(cellW - 4.0f, cellH)
                     .color(shape.color())
                     .outline(context.shapeOutline())
-                    .outlineColor(Color.fromRGB(255, 255, 255))
+                    .outlineColor(Color.WHITE)
                     .outlineThickness(context.lineThickness())
                     .outlineStyle(context.lineStyle())
                     .rotation(shape.rotation())
-                    .cornerRadius(shape.cornerRadius())
-                    .depth(0.002f)
-                    .doubleSided(context.doubleSided())
-                    .build();
-            builder.add(node);
+                    .borderRound(shape.cornerRadius())
+                    .build());
 
             // Label underneath
-            builder.add(new AlignedTextNode(
-                    Component.text(shape.label(), NamedTextColor.GRAY),
-                    x, y + cellH + 0.5f, cellW, 3.5f, UiTextAlignment.CENTER)
-                    .fontSize(2.8f).atDepth(0.003f));
+            container.addComponent(TextComponent.builder("label_" + i)
+                    .anchor(UiAnchorPoint.TOP_LEFT)
+                    .origin(UiAnchorPoint.TOP_LEFT)
+                    .offset(x, y + cellH + 0.5f)
+                    .size(cellW, 4.0f)
+                    .alignment(UiTextAlignment.CENTER)
+                    .text(Component.text(shape.label(), NamedTextColor.GRAY))
+                    .fontSize(2.8f)
+                    .build());
         }
     }
 

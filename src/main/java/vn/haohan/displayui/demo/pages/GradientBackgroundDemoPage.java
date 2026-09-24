@@ -15,12 +15,12 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Color;
 import org.bukkit.entity.Player;
-import vn.haohan.displayui.api.UiDocument;
+import vn.haohan.displayui.api.component.ButtonComponent;
+import vn.haohan.displayui.api.component.TextComponent;
+import vn.haohan.displayui.api.container.Container;
 import vn.haohan.displayui.api.gradient.UiGradient;
 import vn.haohan.displayui.api.gradient.UiGradientPosition;
-import vn.haohan.displayui.api.interaction.UiButton;
-import vn.haohan.displayui.api.node.AlignedTextNode;
-import vn.haohan.displayui.api.node.UiGradientBackgroundNode;
+import vn.haohan.displayui.api.layout.UiAnchorPoint;
 import vn.haohan.displayui.api.text.UiTextAlignment;
 import vn.haohan.displayui.demo.BaseDemoPage;
 import vn.haohan.displayui.demo.DemoContext;
@@ -28,8 +28,7 @@ import vn.haohan.displayui.demo.DemoContext;
 import java.util.List;
 
 /**
- * Visual demo gallery for 2-parameter gradient backgrounds using normalized positions.
- * Allows right-clicking any card to apply its gradient to the main root background.
+ * Visual demo gallery for gradient backgrounds using modern Container and Component architecture.
  */
 public final class GradientBackgroundDemoPage extends BaseDemoPage {
 
@@ -68,60 +67,94 @@ public final class GradientBackgroundDemoPage extends BaseDemoPage {
     }
 
     @Override
-    public void build(UiDocument.Builder builder, DemoContext context) {
-        // Page helper subtitle
-        builder.add(new AlignedTextNode(
-                Component.text("Click any gradient card below to apply it to the root background",
-                        NamedTextColor.GRAY),
-                -86.0f, -34.0f, 172.0f, 7.0f, UiTextAlignment.CENTER).fontSize(3.8f));
+    public void build(Container container, DemoContext context) {
+        container.addComponent(TextComponent.builder("grad_subtitle")
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(0.0f, 0.0f)
+                .size(174.0f, 6.0f)
+                .alignment(UiTextAlignment.CENTER)
+                .text(Component.text("Click any gradient card below to apply it to the root background", NamedTextColor.GRAY))
+                .fontSize(3.8f)
+                .build());
 
         float panelW = 54.0f;
         float panelH = 32.0f;
-        float depth = 0.002f;
-
-        float[] colsX = {-86.0f, -27.0f, 32.0f};
-        float[] rowsY = {-25.0f, 12.0f};
+        float[] colsX = {0.0f, 60.0f, 120.0f};
+        float[] rowsY = {9.0f, 44.0f};
 
         for (int i = 0; i < CARDS.size(); i++) {
             CardInfo card = CARDS.get(i);
             float x = colsX[i % 3];
             float y = rowsY[i / 3];
 
-            addGradientCard(builder, i, x, y, panelW, panelH, depth, card);
+            addGradientCard(container, i, x, y, panelW, panelH, card);
         }
     }
 
-    private void addGradientCard(UiDocument.Builder builder, int index, float x, float y,
-                                 float w, float h, float depth, CardInfo card) {
-        // Line 1: Bold Gold Title
-        builder.add(new AlignedTextNode(
-                Component.text(card.title(), NamedTextColor.GOLD, TextDecoration.BOLD),
-                x, y, w, 5.5f, UiTextAlignment.CENTER)
-                .fontSize(3.8f).shadowed(true));
+    private void addGradientCard(Container container, int index, float x, float y,
+                                 float w, float h, CardInfo card) {
+        Container cardContainer = Container.builder("grad_card_" + index)
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(x, y)
+                .size(w, h)
+                .backgroundColor(Color.fromRGB(24, 28, 38))
+                .borderRound(4.0f)
+                .build();
 
-        // Line 2: Subtle Direction with Aqua arrow indicator
+        // Title
+        cardContainer.addComponent(TextComponent.builder("title_" + index)
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(0.0f, 2.0f)
+                .size(w, 5.0f)
+                .alignment(UiTextAlignment.CENTER)
+                .text(Component.text(card.title(), NamedTextColor.GOLD, TextDecoration.BOLD))
+                .fontSize(3.8f)
+                .shadow(true)
+                .build());
+
+        // Direction text
         Component directionComponent = Component.text()
                 .append(Component.text(card.fromLabel(), NamedTextColor.GRAY))
                 .append(Component.text(" → ", NamedTextColor.AQUA))
                 .append(Component.text(card.toLabel(), NamedTextColor.GRAY))
                 .build();
-        builder.add(new AlignedTextNode(
-                directionComponent,
-                x, y + 5.5f, w, 4.5f, UiTextAlignment.CENTER)
-                .fontSize(2.8f).shadowed(true));
 
-        // Gradient preview swatch
-        UiGradientBackgroundNode node = new UiGradientBackgroundNode(
-                x, y + 11.0f, depth, w, h - 11.0f,
-                card.startPos(), card.startColor(),
-                card.endPos(), card.endColor());
+        cardContainer.addComponent(TextComponent.builder("dir_" + index)
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(0.0f, 7.5f)
+                .size(w, 4.0f)
+                .alignment(UiTextAlignment.CENTER)
+                .text(directionComponent)
+                .fontSize(2.8f)
+                .build());
 
-        builder.gradientBackground(node);
+        // Preview Swatch Container
+        UiGradient swatchGrad = UiGradient.of(card.startPos(), card.startColor(), card.endPos(), card.endColor());
+        Container swatch = Container.builder("swatch_" + index)
+                .anchor(UiAnchorPoint.TOP_LEFT)
+                .origin(UiAnchorPoint.TOP_LEFT)
+                .offset(4.0f, 13.0f)
+                .size(w - 8.0f, 9.0f)
+                .gradient(swatchGrad)
+                .borderRound(2.0f)
+                .build();
+        cardContainer.addContainer(swatch);
 
-        // Clickable button covering the full card bounds
-        builder.button(new UiButton("apply_root_" + index, x, y, w, h,
-                Component.text("Click to apply " + card.title() + " (" + card.fullDirection() + ") to root background",
-                        NamedTextColor.YELLOW)).hitSlop(1));
+        // Apply Button
+        cardContainer.addComponent(ButtonComponent.builder("apply_root_" + index)
+                .anchor(UiAnchorPoint.CENTER_BOTTOM)
+                .origin(UiAnchorPoint.CENTER_BOTTOM)
+                .offset(0.0f, -2.0f)
+                .size(w - 8.0f, 7.0f)
+                .label("APPLY")
+                .borderRound(2.0f)
+                .build());
+
+        container.addContainer(cardContainer);
     }
 
     @Override
@@ -130,7 +163,6 @@ public final class GradientBackgroundDemoPage extends BaseDemoPage {
             int cardIndex = Integer.parseInt(buttonId.substring("apply_root_".length()));
             if (cardIndex >= 0 && cardIndex < CARDS.size()) {
                 CardInfo card = CARDS.get(cardIndex);
-                // Create a darkened translucent root gradient based on the selected card
                 UiGradient rootGrad = UiGradient.of(
                         card.startPos(),
                         Color.fromARGB(215,
