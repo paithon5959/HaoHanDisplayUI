@@ -1753,9 +1753,9 @@ public final class UiScene implements UiHandle {
             UiNode prev = previous.nodes().get(i);
             UiNode curr = next.nodes().get(i);
             if (prev.getClass().equals(curr.getClass())) {
-                float dx = Math.abs(nodeX(prev) - nodeX(curr));
-                float dy = Math.abs(nodeY(prev) - nodeY(curr));
-                if (dx <= maxAllowedDrift && dy <= maxAllowedDrift) {
+                float dx = nodeX(prev) - nodeX(curr);
+                float dy = nodeY(prev) - nodeY(curr);
+                if (Math.hypot(dx, dy) <= maxAllowedDrift) {
                     matched++;
                 }
             }
@@ -1776,7 +1776,7 @@ public final class UiScene implements UiHandle {
     }
 
     private boolean incrementalUpdate(UiDocument previous, UiDocument next) {
-        if (previous == null || nodeEntities == null) return false;
+        if (previous == null || nodeEntities == null || nodeEntities.size() != previous.nodes().size()) return false;
         if (!isStructurallySimilar(previous, next)) {
             return false;
         }
