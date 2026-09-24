@@ -7,9 +7,20 @@ import vn.haohan.displayui.api.node.AlignedTextNode;
 import vn.haohan.displayui.api.node.UiBackgroundNode;
 import vn.haohan.displayui.api.text.UiTextAlignment;
 import org.bukkit.Color;
+import org.bukkit.entity.TextDisplay;
+import org.bukkit.util.Transformation;
+import org.joml.Quaternionf;
+import org.joml.Vector3f;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyFloat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class UiSceneIncrementalUpdateTest {
 
@@ -88,5 +99,92 @@ class UiSceneIncrementalUpdateTest {
                 .build();
 
         assertFalse(UiScene.isStructurallySimilar(doc1, doc2));
+    }
+
+    @Test
+    @DisplayName("Large coordinate displacement exceeds threshold")
+    void testDisplacementThresholdCalculation() {
+        float x1 = 62.0f, y1 = 110.0f;
+        float x2 = 0.0f, y2 = 38.0f;
+        double dist = Math.hypot(x2 - x1, y2 - y1);
+        assertTrue(dist > 15.0f, "Distance from footer to body must exceed threshold");
+    }
+
+    @Test
+    @DisplayName("Large translation jump suppresses interpolation to 0 ticks")
+    void testLargeTranslationJumpSuppressesInterpolation() {
+        UiScene scene = mock(UiScene.class);
+        when(scene.isAnimating()).thenReturn(false);
+        when(scene.interpolationTicks()).thenReturn(5);
+
+        UiSceneRenderer renderer = new UiSceneRenderer(scene);
+        TextDisplay display = mock(TextDisplay.class);
+        when(display.isValid()).thenReturn(true);
+        when(display.getBackgroundColor()).thenReturn(Color.RED);
+
+        Transformation currentTransform = new Transformation(
+                new Vector3f(0.0f, 0.0f, 0.0f),
+                new Quaternionf(),
+                new Vector3f(1.0f, 1.0f, 1.0f),
+                new Quaternionf()
+        );
+        when(display.getTransformation()).thenReturn(currentTransform);
+
+        // Target transformation with large translation jump (> 0.4 blocks, e.g., 1.0 block translation)
+        Transformation newTransform = new Transformation(
+                new Vector3f(1.0f, 0.0f, 0.0f),
+                new Quaternionf(),
+                new Vector3f(1.0f, 1.0f, 1.0f),
+                new Quaternionf()
+        );
+
+        UiBackgroundNode bg = new UiBackgroundNode(0.0f, 0.0f, 0.0f, 10.0f, 10.0f, Color.RED);
+        when(scene.computeBackgroundTransforms(any(), anyFloat(), anyFloat(), anyFloat(), anyFloat()))
+                .thenReturn(List.of(newTransform));
+
+        renderer.updateNode(List.of(display), bg);
+
+        verify(display).setInterpolationDelay(0);
+        verify(display).setInterpolationDuration(0);
+        verify(display).setTransformation(newTransform);
+    }
+
+    @Test
+    @DisplayName("Small translation jump preserves scene interpolation duration")
+    void testSmallTranslationJumpPreservesInterpolation() {
+        UiScene scene = mock(UiScene.class);
+        when(scene.isAnimating()).thenReturn(false);
+        when(scene.interpolationTicks()).thenReturn(5);
+
+        UiSceneRenderer renderer = new UiSceneRenderer(scene);
+        TextDisplay display = mock(TextDisplay.class);
+        when(display.isValid()).thenReturn(true);
+        when(display.getBackgroundColor()).thenReturn(Color.RED);
+
+        Transformation currentTransform = new Transformation(
+                new Vector3f(0.0f, 0.0f, 0.0f),
+                new Quaternionf(),
+                new Vector3f(1.0f, 1.0f, 1.0f),
+                new Quaternionf()
+        );
+        when(display.getTransformation()).thenReturn(currentTransform);
+
+        // Small translation jump (e.g., 0.1 block translation, distSq = 0.01 <= 0.16)
+        Transformation newTransform = new Transformation(
+                new Vector3f(0.1f, 0.0f, 0.0f),
+                new Quaternionf(),
+                new Vector3f(1.0f, 1.0f, 1.0f),
+                new Quaternionf()
+        );
+
+        UiBackgroundNode bg = new UiBackgroundNode(0.0f, 0.0f, 0.0f, 10.0f, 10.0f, Color.RED);
+        when(scene.computeBackgroundTransforms(any(), anyFloat(), anyFloat(), anyFloat(), anyFloat()))
+                .thenReturn(List.of(newTransform));
+
+        renderer.updateNode(List.of(display), bg);
+
+        verify(display).setInterpolationDelay(0);
+        verify(display).setInterpolationDuration(5);
+        verify(display).setTransformation(newTransform);
     }
 }

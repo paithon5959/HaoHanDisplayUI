@@ -137,9 +137,13 @@ final class UiSceneRenderer {
             updateTextBackground(text, shape.color());
         }
         if (!scene.isAnimating() && transform != null) {
-            if (!Objects.equals(display.getTransformation(), transform)) {
+            Transformation current = display.getTransformation();
+            if (!Objects.equals(current, transform)) {
+                // If translation jump is large (> 0.4 blocks ~ 32px), snap immediately without interpolation
+                float distSq = current != null ? current.getTranslation().distanceSquared(transform.getTranslation()) : 0.0f;
+                int duration = (distSq > 0.16f) ? 0 : scene.interpolationTicks();
                 display.setInterpolationDelay(0);
-                display.setInterpolationDuration(scene.interpolationTicks());
+                display.setInterpolationDuration(duration);
                 display.setTransformation(transform);
             }
         }
