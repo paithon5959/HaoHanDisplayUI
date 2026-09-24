@@ -29,10 +29,12 @@ Language: **English** | [Tiếng Việt](#haohandisplayui-tiếng-việt)
 
 ## 2. Key Features
 
-- **Display Entity Canvas**: Full lifecycle management (spawning, rendering, diffing, and cleanup) for `TextDisplay`, `ItemDisplay`, `BlockDisplay`, and `Interaction` entities via an immutable scene graph.
-- **Pixel-Precise Interaction**: Eye-based raycasting computes exact hit points on the canvas surface, powering interactive Buttons, Checkboxes, Sliders, and mouse wheel Scroll Lists.
-- **2D/3D Geometry & Gradients**: Supports line segments, triangles, parallelograms, multi-slice gradient panels, and 3D model cursor tracking.
-- **Optimized & Multi-Platform Compatible**: Fully compatible with Paper, Purpur, and Folia (multi-threaded region scheduling) from version 1.20 to 1.21.x+; minimal packet overhead via localized diff updates.
+- **Layer & Component Architecture**: High-level `LayerManager`, `Layer` (zero Z-fighting depth guarantee), recursive `Container`s with 9-way anchor docking, animated `DropdownContainer`s, and reusable `Component`s (`ButtonComponent`, `CheckboxComponent`, `SliderComponent`, `TextComponent`, `IconComponent`, `ShapeComponent`, `CustomNodeComponent`).
+- **Display Entity Canvas**: Full lifecycle management (spawning, rendering, diffing, atomic page replacement via `replace()`, and cleanup) for `TextDisplay`, `ItemDisplay`, `BlockDisplay`, and `Interaction` entities.
+- **Pixel-Precise Interaction**: Eye-based raycasting computes exact hit points on the canvas surface, powering interactive buttons, checkboxes, sliders, and scroll lists with rich event payloads.
+- **In-Game Diagnostic Suite**: Comprehensive live debugging via `/uidebug` (`inspect`, `clickinspect`, `tree`, `layer`) with real-time targeting BossBar HUD displaying component/container/layer stats.
+- **2D/3D Geometry & Gradients**: Supports line segments, triangles, parallelograms, multi-slice gradient panels, live mob entities, and 3D custom models with cursor tracking.
+- **Optimized & Multi-Platform Compatible**: Fully compatible with Paper, Purpur, and Folia (multi-threaded region scheduling) from version 1.20 to 1.21.x+.
 
 ---
 
@@ -160,10 +162,12 @@ Ngôn ngữ: [English](#haohandisplayui) | **Tiếng Việt**
 
 ## 2. Tính Năng Nổi Bật
 
-- **Dựng UI bằng Display Entity**: Quản lý toàn diện vòng đời spawn, hiển thị và dọn dẹp các thực thể `TextDisplay`, `ItemDisplay`, `BlockDisplay` và `Interaction` theo mô hình scene graph bất biến.
+- **Kiến trúc Layer & Component hiện đại**: Hỗ trợ `LayerManager`, `Layer` chống lỗi Z-fighting, `Container` phân cấp lồng nhau với hệ thống neo 9 điểm, menu thu gọn `DropdownContainer` cùng các `Component` trực quan (`ButtonComponent`, `CheckboxComponent`, `SliderComponent`, `TextComponent`, `IconComponent`, `ShapeComponent`, `CustomNodeComponent`).
+- **Dựng UI bằng Display Entity**: Quản lý toàn diện vòng đời spawn, hiển thị, chuyển trang mượt mà không lỗi giật hiển thị (`replace()`) và dọn dẹp các thực thể `TextDisplay`, `ItemDisplay`, `BlockDisplay` và `Interaction`.
 - **Tương tác chuẩn xác theo pixel**: Cơ chế raycast từ tầm mắt người chơi tính toán chính xác điểm va chạm trên canvas, hỗ trợ đầy đủ Button, Checkbox, Slider và Scroll List cuộn chuột.
-- **Đồ họa 2D/3D và dải màu gradient**: Hỗ trợ vẽ đoạn thẳng, tam giác, hình bình hành, panel gradient đa hướng mượt mà, cùng khả năng xoay mô hình 3D bám theo con trỏ chuột.
-- **Tối ưu hóa và tương thích đa nền tảng**: Tương thích hoàn toàn Paper, Purpur và Folia (hỗ trợ đa luồng vùng region) từ phiên bản 1.20 đến 1.21.x+; cập nhật vi sai (diffing) hạn chế tối đa lưu lượng mạng.
+- **Bộ công cụ gỡ lỗi trực tiếp trong game**: Lệnh `/uidebug` hỗ trợ soi thông số trực tiếp (`inspect`), bấm kiểm tra (`clickinspect`), xem cây giao diện (`tree`) cùng thanh BossBar HUD hiển thị thông số component/container/layer trong thời gian thực.
+- **Đồ họa 2D/3D và dải màu gradient**: Hỗ trợ vẽ đoạn thẳng, tam giác, hình bình hành, panel gradient đa hướng mượt mà, mob sống và mô hình 3D bám theo con trỏ chuột.
+- **Tối ưu hóa và tương thích đa nền tảng**: Tương thích hoàn toàn Paper, Purpur và Folia (hỗ trợ đa luồng vùng region) từ phiên bản 1.20 đến 1.21.x+.
 
 ---
 

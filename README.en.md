@@ -71,6 +71,11 @@ The video demonstrates `/hhdui demo` across its 11 built-in test pages:
 
 | Area | Capabilities |
 |---|---|
+| **Layer & Container Hierarchy** | `LayerManager` and `Layer` stack with guaranteed world-depth separation (zero Z-fighting), recursive `Container`s with 9-way anchor docking, nested proportional scaling, and isolated animation cascades. |
+| **Component Architecture** | Sealed component hierarchy (`ButtonComponent`, `CheckboxComponent`, `SliderComponent`, `TextComponent`, `IconComponent`, `ShapeComponent`, `CustomNodeComponent`) with rich event callbacks (`ComponentClickEvent`, `ComponentChangeEvent`). |
+| **Collapsible Containers** | `DropdownContainer` with animated expand/collapse transitions (`DropdownAnimationType`: `FADE`, `SLIDE_AND_FADE`, `SCALE_Y`, `ACCORDION`), customizable headers, and auto-arranged items. |
+| **In-Game Debug Suite** | Real-time crosshair inspection (`/uidebug inspect`), click-to-inspect (`/uidebug clickinspect`), live BossBar diagnostic HUD displaying target component/container/layer stats, and tree hierarchy dumps (`/uidebug tree`). |
+| **Atomic Page Transitions** | `UiHandle.replace(UiDocument)` & `UiHandle.replace(LayerManager)` for clean, morph-free page switching across structurally distinct layouts. |
 | **Rendering** | `TextDisplay`, `ItemDisplay`, `BlockDisplay`, 2D/3D shapes, layered panels. |
 | **Background & Gradients** | Solid color panels (`UiBackgroundNode`) and continuous multi-slice gradients (`UiGradientBackgroundNode`) with 9 normalized anchors, presets (horizontal, vertical, diagonal), 2D mathematical interpolation, and configurable slice resolution. |
 | **Shapes & Geometry** | Analytical 3-piece triangles (`TriangleNode`), parallelograms/slanted badges (`ParallelogramNode`), closed polylines (`PolylineNode`), axial rolled lines (`LineNode.roll`). |
@@ -110,16 +115,21 @@ HaoHan Display UI deliberately **does not**:
 HaoHanDisplayUI/
 ├── src/main/java/vn/haohan/displayui/
 │   ├── api/                  Public consumer API (UiDocument, UiHandle, DisplayUiService, UiOptions, UiPager)
-│   │   ├── animation/         UiAnimation, UiEasing — tick-based animations with easing curves
+│   │   ├── animation/         UiAnimation, Easings, UiEffects — tick-based animations and transitions
+│   │   ├── bridge/            UiDocumentBridge — high-level Layer/Container to UiDocument compiler
+│   │   ├── component/         Component, ButtonComponent, CheckboxComponent, SliderComponent, TextComponent...
+│   │   ├── container/         Container, DropdownContainer, DropdownAnimationType
+│   │   ├── debug/             UiDebugManager, UiDebugInspector, UiDebugSession, UiDebugState
 │   │   ├── gradient/          UiGradient, UiGradientPosition, UiGradientEndpoint — 2D linear gradient math
 │   │   ├── icon/              UiIconRegistry — shared, plugin-scoped icon registration
 │   │   ├── interaction/       UiButton, UiButtonAction, UiSlider, UiCheckbox, UiScrollList
 │   │   │   └── event/          UiButtonClickEvent, UiControlChangeEvent (cancellable Bukkit events)
-│   │   ├── layout/            UiRect, UiAnchor, UiCameraTransform
+│   │   ├── layer/             Layer, LayerManager — Z-ordered depth-separated layer stack
+│   │   ├── layout/            UiRect, UiAnchorPoint, UiAnchor, UiCameraTransform
 │   │   ├── node/              All renderable node types (text, icon, block, shape, model, mob, backgrounds)
 │   │   ├── shape/             DisplayShapeMath, TRSResult — analytical geometry for Display Entities
 │   │   ├── text/              UiText, UiTextAlignment, UiVerticalAlignment, UiTextOpticalPreset
-│   │   └── view/              UiAudience, UiFollowOptions — visibility and player-follow policies
+│   │   └── view/              UiAudience, UiFollowOptions, UiFollowMode — visibility and follow policies
 │   ├── runtime/              Internal scene graph, raycaster, packet dispatcher, rotation runtime
 │   ├── DisplayUiCommand.java  /hhdui command handler (demo, info, clear)
 │   └── HaoHanDisplayUIPlugin.java  Plugin entry point and Bukkit service registration
@@ -213,6 +223,12 @@ Administrative commands require the `haohansmp.displayui.admin` permission (gran
 | `/hhdui info` | Shows active scene count and the service registration name. |
 | `/hhdui demo` | Creates a private 11-page demonstration UI for the sender. |
 | `/hhdui clear` | Removes all active demonstration scenes. |
+| `/uidebug inspect [on\|off]` | Toggles real-time crosshair raycasting inspection with BossBar HUD. |
+| `/uidebug clickinspect [on\|off]` | Toggles click-inspect mode to print component details to chat. |
+| `/uidebug tree [handle-id]` | Dumps the active Layer -> Container -> Component scene tree. |
+| `/uidebug layer <layerId> toggle` | Dynamically toggles visibility of a specific layer in real time. |
+| `/uidebug session` | Displays active debug session stats for the sender. |
+| `/uidebug clear` | Cleans up all active debug sessions and HUD overlays. |
 
 | Permission | Default | Description |
 |---|---|---|
