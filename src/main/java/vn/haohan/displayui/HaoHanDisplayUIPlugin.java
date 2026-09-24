@@ -46,6 +46,10 @@ public final class HaoHanDisplayUIPlugin extends JavaPlugin {
             getCommand("hhdui").setExecutor(command);
             getCommand("hhdui").setTabCompleter(command);
         }
+        if (getCommand("uidebug") != null) {
+            getCommand("uidebug").setExecutor(command);
+            getCommand("uidebug").setTabCompleter(command);
+        }
         Bukkit.getPluginManager().registerEvents(new UiInteractionListener(service), this);
 
         if (isFolia()) {
