@@ -187,4 +187,35 @@ class UiSceneIncrementalUpdateTest {
         verify(display).setInterpolationDuration(5);
         verify(display).setTransformation(newTransform);
     }
+
+    @Test
+    @DisplayName("Null current transformation suppresses interpolation to 0 ticks")
+    void testNullCurrentTransformSuppressesInterpolation() {
+        UiScene scene = mock(UiScene.class);
+        when(scene.isAnimating()).thenReturn(false);
+        when(scene.interpolationTicks()).thenReturn(5);
+
+        UiSceneRenderer renderer = new UiSceneRenderer(scene);
+        TextDisplay display = mock(TextDisplay.class);
+        when(display.isValid()).thenReturn(true);
+        when(display.getBackgroundColor()).thenReturn(Color.RED);
+        when(display.getTransformation()).thenReturn(null);
+
+        Transformation newTransform = new Transformation(
+                new Vector3f(1.0f, 0.0f, 0.0f),
+                new Quaternionf(),
+                new Vector3f(1.0f, 1.0f, 1.0f),
+                new Quaternionf()
+        );
+
+        UiBackgroundNode bg = new UiBackgroundNode(0.0f, 0.0f, 0.0f, 10.0f, 10.0f, Color.RED);
+        when(scene.computeBackgroundTransforms(any(), anyFloat(), anyFloat(), anyFloat(), anyFloat()))
+                .thenReturn(List.of(newTransform));
+
+        renderer.updateNode(List.of(display), bg);
+
+        verify(display).setInterpolationDelay(0);
+        verify(display).setInterpolationDuration(0);
+        verify(display).setTransformation(newTransform);
+    }
 }

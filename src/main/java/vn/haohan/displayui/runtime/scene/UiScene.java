@@ -243,6 +243,14 @@ public final class UiScene implements UiHandle {
     }
 
     @Override
+    public void replace(UiDocument document) {
+        ensureValid();
+        this.document = Objects.requireNonNull(document, "document");
+        updateControlStates(this.document);
+        respawn();
+    }
+
+    @Override
     public void move(Location origin) {
         move(origin, 0);
     }

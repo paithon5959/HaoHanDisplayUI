@@ -38,6 +38,39 @@ public interface UiHandle {
     String ownerKey();
     boolean isValid();
     void update(UiDocument document);
+
+    default void update(vn.haohan.displayui.api.layer.LayerManager layerManager) {
+        vn.haohan.displayui.api.bridge.UiDocumentBridge.CompiledUi compiled =
+                vn.haohan.displayui.api.bridge.UiDocumentBridge.compileWithAnimations(layerManager);
+        update(compiled.document());
+        if (compiled.hasAnimations()) {
+            animateNodes(compiled.nodeAnimations());
+        }
+    }
+
+    default void update(vn.haohan.displayui.api.container.Container container) {
+        vn.haohan.displayui.api.layer.LayerManager manager = new vn.haohan.displayui.api.layer.LayerManager();
+        manager.createLayer("root_layer", 0).addContainer(container);
+        update(manager);
+    }
+
+    /** Replaces the entire document with a clean respawn, bypassing incremental entity reuse. */
+    void replace(UiDocument document);
+
+    default void replace(vn.haohan.displayui.api.layer.LayerManager layerManager) {
+        vn.haohan.displayui.api.bridge.UiDocumentBridge.CompiledUi compiled =
+                vn.haohan.displayui.api.bridge.UiDocumentBridge.compileWithAnimations(layerManager);
+        replace(compiled.document());
+        if (compiled.hasAnimations()) {
+            animateNodes(compiled.nodeAnimations());
+        }
+    }
+
+    default void replace(vn.haohan.displayui.api.container.Container container) {
+        vn.haohan.displayui.api.layer.LayerManager manager = new vn.haohan.displayui.api.layer.LayerManager();
+        manager.createLayer("root_layer", 0).addContainer(container);
+        replace(manager);
+    }
     void move(Location origin);
     void audience(UiAudience audience);
     void cameraTransform(UiCameraTransform transform);
